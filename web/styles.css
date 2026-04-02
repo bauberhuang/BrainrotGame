@@ -1,0 +1,518 @@
+:root {
+  --bg: #fff4de;
+  --bg-deep: #ffd39f;
+  --ink: #26140a;
+  --card: rgba(255, 250, 240, 0.86);
+  --line: rgba(68, 34, 11, 0.12);
+  --roll: #d93a2f;
+  --buy: #2870ff;
+  --gold: #ffb548;
+  --gold-deep: #ff7d43;
+  --success: #138a52;
+  --shadow: 0 20px 60px rgba(109, 55, 8, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(255, 158, 54, 0.3), transparent 28%),
+    linear-gradient(135deg, var(--bg), var(--bg-deep));
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: auto;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+body::before {
+  top: 5%;
+  right: 8%;
+}
+
+body::after {
+  bottom: 2%;
+  left: 4%;
+}
+
+.game-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.topbar,
+.roller-panel,
+.collection-panel,
+.rebirth-panel {
+  backdrop-filter: blur(14px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+}
+
+.eyebrow,
+.label,
+.small-note,
+.chance-badge,
+.trait-tag,
+.status-text,
+.character-stat span {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.eyebrow,
+.small-note,
+.status-text,
+.label,
+.character-stat span {
+  font-size: 0.78rem;
+}
+
+.headline-wrap h1,
+.panel-title-row h2,
+#characterName {
+  margin: 0;
+}
+
+.headline-wrap h1 {
+  font-family: "Bungee", cursive;
+  font-size: clamp(1.7rem, 3vw, 2.9rem);
+  line-height: 1.08;
+  max-width: 12ch;
+}
+
+.totals {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.stat-pill {
+  min-width: 170px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(38, 20, 10, 0.08);
+}
+
+.stat-pill strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.4rem;
+}
+
+.stat-pill.accent {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: white;
+}
+
+.stat-button {
+  min-width: 170px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, filter 0.16s ease;
+  border: none;
+}
+
+.stat-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+}
+
+.stat-button:active {
+  transform: translateY(0);
+}
+
+.rebirth-launch {
+  min-height: 84px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.rebirth-page {
+  margin-top: 24px;
+}
+
+.roller-panel,
+.collection-panel,
+.rebirth-panel {
+  padding: 24px;
+}
+
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.chance-badge,
+.trait-tag,
+.rarity-tag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.chance-badge {
+  background: rgba(217, 58, 47, 0.12);
+  color: #a7241c;
+}
+
+.sprite-card {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sprite-frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 186, 94, 0.4), rgba(255, 255, 255, 0.7)),
+    #fff4e8;
+  border: 1px solid rgba(38, 20, 10, 0.08);
+}
+
+.sprite-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sprite-frame.rainbow {
+  animation: rainbowGlow 3.6s linear infinite;
+}
+
+.name-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#characterName {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.trait-tag {
+  color: white;
+  background: linear-gradient(135deg, #ff3f81, #ff9d00, #18b8ff, #58d84f);
+  background-size: 200% 200%;
+  animation: rainbowShift 4s ease infinite;
+}
+
+.rarity-tag {
+  background: rgba(38, 20, 10, 0.08);
+  color: rgba(38, 20, 10, 0.82);
+}
+
+.rarity-tag.common {
+  background: rgba(111, 118, 128, 0.16);
+  color: #5f6670;
+}
+
+.rarity-tag.epic {
+  background: rgba(130, 63, 255, 0.16);
+  color: #7d32ff;
+}
+
+.rarity-tag.mythic {
+  background: rgba(227, 41, 41, 0.16);
+  color: #cf1f1f;
+}
+
+.hidden {
+  display: none;
+}
+
+.flavor {
+  margin: 12px 0 18px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(38, 20, 10, 0.8);
+}
+
+.character-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.character-stat {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(38, 20, 10, 0.08);
+}
+
+.character-stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.4rem;
+}
+
+.button-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.game-button {
+  flex: 1;
+  border: none;
+  border-radius: 18px;
+  padding: 16px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.game-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.game-button:active {
+  transform: translateY(0);
+}
+
+.game-button.buy {
+  background: linear-gradient(135deg, #2363f4, #2d9dff);
+}
+
+.game-button.roll {
+  background: linear-gradient(135deg, #ba1c11, #ff5c46);
+}
+
+.game-button.rebirth-action {
+  margin-top: 22px;
+  background: linear-gradient(135deg, #ff8f1f, #ff4e36);
+}
+
+.game-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.rebirth-grid,
+.rebirth-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.rebirth-card,
+.rebirth-info-block {
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(38, 20, 10, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.rebirth-card strong,
+.rebirth-info-block strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.rebirth-card.accent {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: white;
+}
+
+.rebirth-copy {
+  margin: 22px 0 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: rgba(38, 20, 10, 0.82);
+}
+
+.back-button {
+  border: none;
+  border-radius: 18px;
+  padding: 12px 18px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3f4b68, #6c7896);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.back-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.back-button:active {
+  transform: translateY(0);
+}
+
+.status-text {
+  margin: 18px 4px 0;
+  min-height: 1.2rem;
+  color: rgba(38, 20, 10, 0.74);
+}
+
+.owned-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.owned-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(38, 20, 10, 0.08);
+}
+
+.owned-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 18px;
+}
+
+.owned-name {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.owned-meta,
+.owned-income {
+  margin: 0;
+  font-size: 0.92rem;
+  color: rgba(38, 20, 10, 0.74);
+}
+
+.owned-income {
+  text-align: right;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.empty-state {
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px dashed rgba(38, 20, 10, 0.18);
+  text-align: center;
+  color: rgba(38, 20, 10, 0.68);
+}
+
+@keyframes rainbowShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes rainbowGlow {
+  0% {
+    box-shadow: inset 0 0 0 4px rgba(255, 73, 118, 0.45);
+  }
+  33% {
+    box-shadow: inset 0 0 0 4px rgba(255, 180, 56, 0.45);
+  }
+  66% {
+    box-shadow: inset 0 0 0 4px rgba(17, 170, 255, 0.45);
+  }
+  100% {
+    box-shadow: inset 0 0 0 4px rgba(255, 73, 118, 0.45);
+  }
+}
+
+@media (max-width: 960px) {
+  .topbar,
+  .sprite-card,
+  .main-grid,
+  .rebirth-grid,
+  .rebirth-info {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .game-shell {
+    padding: 16px;
+  }
+
+  .topbar,
+  .roller-panel,
+  .collection-panel,
+  .rebirth-panel {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .button-row,
+  .character-stats,
+  .rebirth-grid,
+  .rebirth-info {
+    grid-template-columns: 1fr;
+  }
+
+  .owned-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+
+  .owned-income {
+    text-align: left;
+    grid-column: 2;
+  }
+}

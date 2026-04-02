@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brainrot Roller</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="topbar">
+        <div class="headline-wrap">
+          <p class="eyebrow">Idle Brainrot Casino</p>
+          <h1>Roll weird. Buy weird. Get richer every second.</h1>
+        </div>
+        <div class="totals">
+          <div class="stat-pill">
+            <span class="label">Money</span>
+            <strong id="moneyDisplay">$10.00</strong>
+          </div>
+          <div class="stat-pill accent">
+            <span class="label">Money/s All</span>
+            <strong id="totalIncomeDisplay">$0.00/s</strong>
+          </div>
+          <button class="stat-pill accent stat-button rebirth-launch" id="rebirthPageButton" type="button">
+            <span class="label">Rebirth</span>
+            <strong>Open Rebirth</strong>
+          </button>
+        </div>
+      </header>
+
+      <section class="main-grid" id="mainPage">
+        <section class="roller-panel">
+          <div class="panel-title-row">
+            <h2>Character</h2>
+            <span class="chance-badge" id="rollChanceDisplay">Roll Ready</span>
+          </div>
+
+          <article class="sprite-card" id="spriteCard">
+            <div class="sprite-frame" id="spriteFrame">
+              <img id="spriteImage" alt="Current brainrot" />
+            </div>
+
+            <div class="sprite-copy">
+              <div class="name-line">
+                <h3 id="characterName">Loading...</h3>
+                <span class="rarity-tag" id="rarityTag">COMMON</span>
+                <span class="trait-tag hidden" id="traitTag">RAINBOW</span>
+              </div>
+              <p class="flavor" id="characterFlavor"></p>
+
+              <div class="character-stats">
+                <div class="character-stat">
+                  <span>Money/s</span>
+                  <strong id="characterIncome">$0.00/s</strong>
+                </div>
+                <div class="character-stat">
+                  <span>Cost</span>
+                  <strong id="characterCost">$0.00</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="button-row">
+            <button class="game-button buy" id="buyButton" type="button">Buy</button>
+            <button class="game-button roll" id="rollButton" type="button">Roll</button>
+          </div>
+
+          <p class="status-text" id="statusText">
+            Roll to find your first brainrot.
+          </p>
+        </section>
+
+        <aside class="collection-panel">
+          <div class="panel-title-row">
+            <h2>Your Collection</h2>
+            <span class="small-note">Multiples allowed</span>
+          </div>
+          <div class="owned-list" id="ownedList"></div>
+        </aside>
+      </section>
+
+      <section class="rebirth-page hidden" id="rebirthPage">
+        <article class="rebirth-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Brainrot Ascension</p>
+              <h2>Rebirth Chamber</h2>
+            </div>
+            <button class="back-button" id="backToGameButton" type="button">Back</button>
+          </div>
+
+          <div class="rebirth-grid">
+            <div class="rebirth-card">
+              <span class="label">Current Rebirths</span>
+              <strong id="rebirthCountDisplay">0</strong>
+            </div>
+            <div class="rebirth-card accent">
+              <span class="label">Cash Multiplier</span>
+              <strong id="cashMultiplierDisplay">1.0x</strong>
+            </div>
+          </div>
+
+          <div class="rebirth-info">
+            <div class="rebirth-info-block">
+              <span class="label">Next Multiplier</span>
+              <strong id="nextMultiplierDisplay">1.5x</strong>
+            </div>
+            <div class="rebirth-info-block">
+              <span class="label">Cash Required</span>
+              <strong id="rebirthRequirementDisplay">$1.000M</strong>
+            </div>
+          </div>
+
+          <p class="rebirth-copy" id="rebirthDescription">
+            Your 1st rebirth will boost all brainrots to 1.5x cash.
+          </p>
+
+          <button class="game-button rebirth-action" id="miniRebirthButton" type="button">
+            Rebirth
+          </button>
+          <p class="status-text" id="rebirthStatusText">
+            Stack rebirths to push every brainrot income higher.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
