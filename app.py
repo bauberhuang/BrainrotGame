@@ -48,7 +48,7 @@ def create_server(host: str, start_port: int, attempts: int = 20) -> Tuple[Threa
 
 
 def main() -> None:
-    host = "0.0.0.0"
+    host = "127.0.0.1"
     server, port = create_server(host, 8010)
 
     print(f"Serving brainrot idle game at http://{host}:{port}")

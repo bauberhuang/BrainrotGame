@@ -1,65 +1,65 @@
 const imageLibrary = {
-  sixtySeven: "https://i.kym-cdn.com/photos/images/newsfeed/003/161/344/80f.jpeg",
-  tungTungTungSahur: "https://i.kym-cdn.com/photos/images/newsfeed/003/226/691/cc4.jpeg",
-  ballerinaCappuccina: "https://i.kym-cdn.com/photos/images/newsfeed/003/144/615/23f.jpg",
-  tralaleroTralala: "https://i.kym-cdn.com/photos/images/newsfeed/003/144/613/419.jpg",
-  fluriFlura: "https://builtbybit.com/attachments/1761176055804-png.1084645/",
-  strawberryElephant: "https://i.kym-cdn.com/photos/images/newsfeed/002/316/919/9de.jpg",
+  sixtySeven: "img/67.jpg",
+  tungTungTungSahur: "img/ttt.webp",
+  ballerinaCappuccina: "img/ballerina.jfif",
+  tralaleroTralala: "img/tralalelo.jfif",
+  fluriFlura: "img/FluriFlura.webp",
+  strawberryElephant: "img/Strawberry-elephant.jpg",
 };
 
 const characters = [
   {
     id: "67",
     name: "67",
-    chance: 0.4,
+    value: 4,
     cost: 10,
     income: 1,
-    flavor: "The cheapest little chaos gremlin. Loud, common, and somehow profitable.",
+    flavor: "67! the chaos in 2025",
     img: imageLibrary.sixtySeven,
   },
   {
     id: "tung-tung-tung-sahur",
     name: "Tung Tung Tung Sahur",
-    chance: 0.1,
+    value: 1,
     cost: 50,
     income: 5,
-    flavor: "Rare midnight energy. Hits hard once the money engine starts rolling.",
+    flavor: "the original brainrot and also the first brainrot made by OG Noxa",
     img: imageLibrary.tungTungTungSahur,
   },
   {
     id: "ballerina-cappuccina",
     name: "Ballerina Cappuccina",
-    chance: 0.1,
+    value: 1,
     cost: 50,
     income: 5,
-    flavor: "Graceful coffee-powered nonsense with a clean passive income stream.",
+    flavor: "Tung tung's wife",
     img: imageLibrary.ballerinaCappuccina,
   },
   {
     id: "tralalero-tralala",
     name: "Tralalelo Tralala",
-    chance: 0.1,
+    value: 1,
     cost: 50,
     income: 5,
-    flavor: "A beautifully cursed anthem in creature form. Very efficient once owned.",
+    flavor: "tung tung's friend who is beside the sea",
     img: imageLibrary.tralaleroTralala,
   },
   {
     id: "fluri-flura",
     name: "Fluri Flura",
-    chance: 0.25,
+    value: 2.5,
     cost: 25,
     income: 2.5,
-    flavor: "A fluttery wildcard with solid value for the price and good mid-game scaling.",
+    flavor: "flying across the sea!",
     img: imageLibrary.fluriFlura,
   },
   {
     id: "strawberry-elephant",
     name: "Strawberry Elephant",
-    chance: 0.05,
+    value: 0.5,
     cost: 100,
     income: 10,
-    flavor: "Ridiculously rare and absolutely worth it if you can afford the fruit beast.",
+    flavor: "the first \"brainrot\" ever made, made in 2009",
     img: imageLibrary.strawberryElephant,
   },
 ];
@@ -67,6 +67,7 @@ const characters = [
 const RAINBOW_CHANCE = 0.1;
 const RAINBOW_MULTIPLIER = 1.5;
 const MAX_REBIRTHS = 20;
+const AUTO_ROLL_SECONDS = 10;
 const SAVE_KEY = "brainrot-idle-save-v2";
 
 const dom = {
@@ -88,6 +89,7 @@ const dom = {
   characterFlavor: document.querySelector("#characterFlavor"),
   characterIncome: document.querySelector("#characterIncome"),
   characterCost: document.querySelector("#characterCost"),
+  rollTimerDisplay: document.querySelector("#rollTimerDisplay"),
   spriteImage: document.querySelector("#spriteImage"),
   spriteFrame: document.querySelector("#spriteFrame"),
   traitTag: document.querySelector("#traitTag"),
@@ -99,15 +101,16 @@ const dom = {
 };
 
 const characterById = Object.fromEntries(characters.map((entry) => [entry.id, entry]));
+const totalCharacterValue = characters.reduce((total, entry) => total + entry.value, 0);
 
 const state = loadState();
+let autoRollRemaining = AUTO_ROLL_SECONDS;
 
 function createDefaultState() {
   return {
     money: 10,
     currentRoll: null,
     owned: {},
-    activeRainbowId: null,
     rebirthCount: 0,
     lastTick: Date.now(),
   };
@@ -123,11 +126,24 @@ function loadState() {
     }
 
     const parsed = JSON.parse(raw);
+    const normalizedOwned = Object.fromEntries(
+      Object.entries(parsed.owned || {}).map(([id, entry]) => {
+        const legacyCount = Number(entry.count) || 0;
+        return [
+          id,
+          {
+            id,
+            normalCount: Number(entry.normalCount) || legacyCount,
+            rainbowCount: Number(entry.rainbowCount) || 0,
+          },
+        ];
+      }),
+    );
+
     return {
       money: Number(parsed.money) || 10,
       currentRoll: parsed.currentRoll || null,
-      owned: parsed.owned || {},
-      activeRainbowId: parsed.activeRainbowId || null,
+      owned: normalizedOwned,
       rebirthCount: Math.max(0, Math.min(MAX_REBIRTHS, Number(parsed.rebirthCount) || 0)),
       lastTick: Number(parsed.lastTick) || Date.now(),
     };
@@ -170,15 +186,15 @@ function formatMultiplier(value) {
   return `${value.toFixed(1)}x`;
 }
 
-function getRarityLabel(chance) {
-  if (chance <= 0.09) {
+function getRarityLabel(value) {
+  if (value <= 1) {
     return {
       text: "MYTHIC",
       className: "mythic",
     };
   }
 
-  if (chance <= 0.25) {
+  if (value <= 4) {
     return {
       text: "EPIC",
       className: "epic",
@@ -189,6 +205,20 @@ function getRarityLabel(chance) {
     text: "COMMON",
     className: "common",
   };
+}
+
+function getValueFraction(value) {
+  return `${value}/${totalCharacterValue}`;
+}
+
+function formatPercentFromValue(value) {
+  const percent = (value / totalCharacterValue) * 100;
+  const rounded = Math.round(percent * 100) / 100;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(2)}%`;
+}
+
+function getValueChanceLabel(value) {
+  return `${getValueFraction(value)} (${formatPercentFromValue(value)})`;
 }
 
 function getCashMultiplierForRebirthCount(rebirthCount) {
@@ -222,11 +252,11 @@ function getOrdinalSuffix(value) {
 }
 
 function weightedRoll() {
-  const roll = Math.random();
+  const roll = Math.random() * totalCharacterValue;
   let running = 0;
 
   for (const character of characters) {
-    running += character.chance;
+    running += character.value;
     if (roll <= running) {
       return character;
     }
@@ -256,12 +286,9 @@ function getTotalIncomePerSecond() {
 
   return Object.values(state.owned).reduce((total, entry) => {
     const baseCharacter = characterById[entry.id];
-    const rainbowBonus =
-      state.activeRainbowId === entry.id && entry.count > 0
-        ? baseCharacter.income * (RAINBOW_MULTIPLIER - 1)
-        : 0;
-
-    return total + (entry.count * baseCharacter.income + rainbowBonus) * cashMultiplier;
+    const normalIncome = entry.normalCount * baseCharacter.income;
+    const rainbowIncome = entry.rainbowCount * baseCharacter.income * RAINBOW_MULTIPLIER;
+    return total + (normalIncome + rainbowIncome) * cashMultiplier;
   }, 0);
 }
 
@@ -297,7 +324,7 @@ function renderCurrentRoll() {
   const current = state.currentRoll;
   const character = characterById[current.id];
   const income = getUnitIncome(current);
-  const rarity = getRarityLabel(character.chance);
+  const rarity = getRarityLabel(character.value);
 
   dom.characterName.textContent = character.name;
   dom.rarityTag.textContent = rarity.text;
@@ -307,10 +334,14 @@ function renderCurrentRoll() {
   dom.characterCost.textContent = formatMoney(character.cost);
   dom.spriteImage.src = character.img;
   dom.spriteImage.alt = character.name;
-  dom.rollChanceDisplay.textContent = `Chance ${(character.chance * 100).toFixed(0)}%`;
+  dom.rollChanceDisplay.textContent = `Value ${getValueChanceLabel(character.value)}`;
 
   dom.traitTag.classList.toggle("hidden", !current.rainbow);
   dom.spriteFrame.classList.toggle("rainbow", current.rainbow);
+}
+
+function renderRollTimer() {
+  dom.rollTimerDisplay.textContent = `${autoRollRemaining}s`;
 }
 
 function renderTotals() {
@@ -320,7 +351,7 @@ function renderTotals() {
 
 function renderOwned() {
   const ownedEntries = Object.values(state.owned).sort((a, b) => {
-    return characterById[b.id].chance - characterById[a.id].chance;
+    return characterById[b.id].value - characterById[a.id].value;
   });
 
   if (ownedEntries.length === 0) {
@@ -335,14 +366,11 @@ function renderOwned() {
   dom.ownedList.innerHTML = ownedEntries
     .map((entry) => {
       const character = characterById[entry.id];
-      const rainbowActive = state.activeRainbowId === entry.id && entry.count > 0;
-      const rarity = getRarityLabel(character.chance);
+      const rarity = getRarityLabel(character.value);
       const income =
-        (entry.count * character.income +
-          (rainbowActive ? character.income * (RAINBOW_MULTIPLIER - 1) : 0)) *
+        (entry.normalCount * character.income +
+          entry.rainbowCount * character.income * RAINBOW_MULTIPLIER) *
         getCashMultiplierForRebirthCount(state.rebirthCount);
-      const rainbowCount = rainbowActive ? 1 : 0;
-      const normalCount = Math.max(0, entry.count - rainbowCount);
       const baseIncomeWithMultiplier = character.income * getCashMultiplierForRebirthCount(state.rebirthCount);
 
       return `
@@ -351,8 +379,9 @@ function renderOwned() {
           <div>
             <p class="owned-name">${character.name}</p>
             <p class="owned-meta">${rarity.text}</p>
-            <p class="owned-meta">Normal ${normalCount}</p>
-            <p class="owned-meta">Rainbow ${rainbowCount}${rainbowActive ? " Active" : ""}</p>
+            <p class="owned-meta">Value ${getValueChanceLabel(character.value)}</p>
+            <p class="owned-meta">Normal ${entry.normalCount}</p>
+            <p class="owned-meta">Rainbow ${entry.rainbowCount}</p>
             <p class="owned-meta">Base ${formatMoney(baseIncomeWithMultiplier)}/s each</p>
           </div>
           <p class="owned-income">${formatMoney(income)}/s</p>
@@ -383,13 +412,26 @@ function renderRebirthPage() {
 function render() {
   renderTotals();
   renderCurrentRoll();
+  renderRollTimer();
   renderOwned();
   renderRebirthPage();
   saveState();
 }
 
-function rollCharacter() {
+function resetAutoRollTimer() {
+  autoRollRemaining = AUTO_ROLL_SECONDS;
+  renderRollTimer();
+}
+
+function setNewRoll(resetTimer) {
   state.currentRoll = createRolledCharacter();
+  if (resetTimer) {
+    resetAutoRollTimer();
+  }
+}
+
+function rollCharacter(resetTimer = true) {
+  setNewRoll(resetTimer);
   const rolled = characterById[state.currentRoll.id];
 
   if (state.currentRoll.rainbow) {
@@ -409,7 +451,7 @@ function buyCurrentCharacter() {
 
   if (state.money < character.cost) {
     setStatus(`Not enough money for ${character.name}. Auto-rolling a new one.`);
-    rollCharacter();
+    rollCharacter(false);
     return;
   }
 
@@ -418,20 +460,20 @@ function buyCurrentCharacter() {
   if (!state.owned[current.id]) {
     state.owned[current.id] = {
       id: current.id,
-      count: 0,
+      normalCount: 0,
+      rainbowCount: 0,
     };
   }
 
-  state.owned[current.id].count += 1;
-
   if (current.rainbow) {
-    state.activeRainbowId = current.id;
-    setStatus(`Bought a RAINBOW ${character.name}. It is now your active 1.5x Rainbow bonus.`);
+    state.owned[current.id].rainbowCount += 1;
+    setStatus(`Bought a RAINBOW ${character.name}. That copy earns 1.5x by itself.`);
   } else {
+    state.owned[current.id].normalCount += 1;
     setStatus(`Bought ${character.name}. Passive income increased.`);
   }
 
-  state.currentRoll = createRolledCharacter();
+  setNewRoll(true);
   render();
 }
 
@@ -463,7 +505,6 @@ function tryRebirth() {
   state.money = 10;
   state.currentRoll = null;
   state.owned = {};
-  state.activeRainbowId = null;
   state.lastTick = Date.now();
 
   ensureCurrentRoll();
@@ -474,7 +515,12 @@ function tryRebirth() {
 
 function tickIncome() {
   state.money += getTotalIncomePerSecond();
+  autoRollRemaining -= 1;
+  if (autoRollRemaining <= 0) {
+    rollCharacter();
+  }
   renderTotals();
+  renderRollTimer();
   saveState();
 }
 

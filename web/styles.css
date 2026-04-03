@@ -290,6 +290,27 @@ body::after {
   font-size: 1.4rem;
 }
 
+.roll-timer-card {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 193, 112, 0.3), rgba(255, 255, 255, 0.8));
+  border: 1px solid rgba(38, 20, 10, 0.08);
+}
+
+.roll-timer-card span {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.roll-timer-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.4rem;
+}
+
 .button-row {
   display: flex;
   gap: 14px;
