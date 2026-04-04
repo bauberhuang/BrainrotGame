@@ -32,6 +32,10 @@
             <span class="label">Rebirth</span>
             <strong>Open Rebirth</strong>
           </button>
+          <button class="stat-pill stat-button admin-launch" id="adminAuthButton" type="button">
+            <span class="label">Admin</span>
+            <strong>Admin Auth</strong>
+          </button>
         </div>
       </header>
 
@@ -70,6 +74,11 @@
                 <span>Auto Roll In</span>
                 <strong id="rollTimerDisplay">10s</strong>
               </div>
+
+              <div class="event-timer-card hidden" id="eventTimerCard">
+                <span id="eventTimerLabel">Event Ends In</span>
+                <strong id="eventTimerDisplay">5m 00s</strong>
+              </div>
             </div>
           </article>
 
@@ -86,9 +95,45 @@
         <aside class="collection-panel">
           <div class="panel-title-row">
             <h2>Your Collection</h2>
-            <span class="small-note">Multiples allowed</span>
+            <div class="collection-actions">
+              <span class="small-note" id="luckyBlockInventoryDisplay">Lucky Blocks 0</span>
+              <button class="mini-action hidden" id="uncoverLuckyBlockButton" type="button">Uncover 1</button>
+              <button class="mini-action hidden" id="uncoverAllLuckyBlocksButton" type="button">Uncover All</button>
+            </div>
           </div>
           <div class="owned-list" id="ownedList"></div>
+
+          <div class="viewer-panel hidden" id="ownedViewerPanel">
+            <div class="panel-title-row">
+              <h2>View Brainrot</h2>
+              <span class="small-note" id="ownedViewerType">Collection View</span>
+            </div>
+
+            <article class="sprite-card compact-viewer">
+              <div class="sprite-frame">
+                <img id="ownedViewerImage" alt="Viewed owned brainrot" />
+              </div>
+
+              <div class="sprite-copy">
+                <div class="name-line">
+                  <h3 id="ownedViewerName">Loading...</h3>
+                  <span class="rarity-tag" id="ownedViewerRarity">COMMON</span>
+                </div>
+                <p class="flavor" id="ownedViewerFlavor"></p>
+
+                <div class="character-stats">
+                  <div class="character-stat">
+                    <span>Cost</span>
+                    <strong id="ownedViewerCost">$0.00</strong>
+                  </div>
+                  <div class="character-stat">
+                    <span>Money/s</span>
+                    <strong id="ownedViewerIncome">$0.00/s</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </aside>
       </section>
 
@@ -134,6 +179,77 @@
           <p class="status-text" id="rebirthStatusText">
             Stack rebirths to push every brainrot income higher.
           </p>
+        </article>
+      </section>
+
+      <section class="rebirth-page hidden" id="adminPage">
+        <article class="rebirth-panel admin-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Admin Control</p>
+              <h2>Brainrot Spawner</h2>
+            </div>
+            <button class="back-button" id="adminBackButton" type="button">Back</button>
+          </div>
+
+          <div id="adminAuthView">
+            <p class="rebirth-copy">Please enter your password.</p>
+            <div class="admin-auth-row">
+              <input class="admin-input" id="adminPasswordInput" type="password" placeholder="Password" />
+              <button class="game-button rebirth-action" id="adminPasswordSubmitButton" type="button">Unlock</button>
+            </div>
+            <p class="status-text" id="adminStatusText">Admin auth is locked.</p>
+          </div>
+
+          <div class="hidden" id="adminSpawnerView">
+            <div class="rebirth-info">
+              <div class="rebirth-info-block">
+                <span class="label">Mutations</span>
+                <select class="admin-select" id="adminMutationSelect"></select>
+              </div>
+              <div class="rebirth-info-block">
+                <span class="label">Brainrot</span>
+                <select class="admin-select" id="adminBrainrotSelect"></select>
+              </div>
+              <div class="rebirth-info-block">
+                <span class="label">Amount</span>
+                <input class="admin-input" id="adminAmountInput" type="number" min="1" max="1000000000000000000" value="1" />
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="game-button buy" id="adminConfirmButton" type="button">Confirm</button>
+            </div>
+
+            <div class="rebirth-info">
+              <div class="rebirth-info-block">
+                <span class="label">Set Money</span>
+                <input class="admin-input" id="adminSetMoneyInput" type="number" min="0" value="0" />
+              </div>
+              <div class="rebirth-info-block">
+                <span class="label">Set Rebirth</span>
+                <input class="admin-input" id="adminSetRebirthInput" type="number" min="0" max="20" value="0" />
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="game-button roll" id="adminSetMoneyButton" type="button">Set Money</button>
+              <button class="game-button rebirth-action" id="adminSetRebirthButton" type="button">Set Rebirth</button>
+            </div>
+
+            <div class="rebirth-info">
+              <div class="rebirth-info-block">
+                <span class="label">Set Event</span>
+                <select class="admin-select" id="adminEventSelect"></select>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button class="game-button buy" id="adminSetEventButton" type="button">Set Event</button>
+              <button class="game-button roll" id="adminClearEventButton" type="button">Off</button>
+            </div>
+            <p class="status-text" id="adminSpawnerStatusText">Spawn brainrots directly into your collection.</p>
+          </div>
         </article>
       </section>
     </main>

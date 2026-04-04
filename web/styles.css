@@ -25,6 +25,81 @@ body {
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 35%),
     radial-gradient(circle at bottom right, rgba(255, 158, 54, 0.3), transparent 28%),
     linear-gradient(135deg, var(--bg), var(--bg-deep));
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+body.event-rainbow {
+  --bg: #fff0fa;
+  --bg-deep: #ffd782;
+  --card: rgba(255, 250, 253, 0.88);
+}
+
+body.event-radioactive {
+  --bg: #2e0b12;
+  --bg-deep: #593314;
+  --ink: #ffffff;
+  --card: rgba(55, 18, 26, 0.84);
+  --line: rgba(255, 231, 214, 0.12);
+  --shadow: 0 20px 60px rgba(11, 0, 0, 0.36);
+}
+
+body.event-radioactive .admin-panel,
+body.event-radioactive .rebirth-panel,
+body.event-radioactive .rebirth-card,
+body.event-radioactive .rebirth-info-block,
+body.event-radioactive .roll-timer-card,
+body.event-radioactive .event-timer-card,
+body.event-radioactive .character-stat,
+body.event-radioactive .owned-card,
+body.event-radioactive .stat-pill,
+body.event-radioactive .sprite-frame {
+  background: rgba(255, 245, 238, 0.9);
+  color: #111111;
+}
+
+body.event-radioactive .topbar,
+body.event-radioactive .roller-panel,
+body.event-radioactive .collection-panel,
+body.event-radioactive .headline-wrap h1,
+body.event-radioactive .panel-title-row h2,
+body.event-radioactive #characterName,
+body.event-radioactive #characterFlavor,
+body.event-radioactive #ownedViewerFlavor,
+body.event-radioactive .owned-name,
+body.event-radioactive #luckyBlockInventoryDisplay,
+body.event-radioactive .chance-badge,
+body.event-radioactive .eyebrow,
+body.event-radioactive .small-note {
+  color: #ffffff;
+}
+
+body.event-radioactive .admin-input,
+body.event-radioactive .admin-select {
+  background: rgba(255, 255, 255, 0.96);
+  color: #111111;
+  border-color: rgba(17, 17, 17, 0.12);
+  -webkit-text-fill-color: #111111;
+}
+
+body.event-radioactive .admin-input::placeholder {
+  color: rgba(17, 17, 17, 0.52);
+  -webkit-text-fill-color: rgba(17, 17, 17, 0.52);
+}
+
+body.event-radioactive .admin-select option {
+  color: #111111;
+  background: #ffffff;
+}
+
+body.event-radioactive .rebirth-copy,
+body.event-radioactive .status-text,
+body.event-radioactive .flavor,
+body.event-radioactive .owned-meta,
+body.event-radioactive .label,
+body.event-radioactive .rebirth-panel h2,
+body.event-radioactive .rebirth-panel h3,
+body.event-radioactive .character-stat span {
+  color: rgba(17, 17, 17, 0.76);
 }
 
 body::before,
@@ -154,6 +229,12 @@ body::after {
   min-height: 84px;
 }
 
+.admin-launch {
+  min-height: 84px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 232, 220, 0.95));
+  color: var(--ink);
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -178,6 +259,20 @@ body::after {
   gap: 12px;
 }
 
+.collection-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.viewer-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(38, 20, 10, 0.08);
+}
+
 .chance-badge,
 .trait-tag,
 .rarity-tag {
@@ -200,6 +295,10 @@ body::after {
   align-items: start;
 }
 
+.compact-viewer {
+  grid-template-columns: 140px minmax(0, 1fr);
+}
+
 .sprite-frame {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -218,8 +317,27 @@ body::after {
   display: block;
 }
 
+.sprite-frame img.cutout-image {
+  object-fit: contain;
+  padding: 14px;
+  background:
+    radial-gradient(circle at center, rgba(255, 244, 222, 0.92), rgba(255, 255, 255, 0.72));
+}
+
+.sprite-frame img.mutation-rainbow {
+  animation: rainbowImageShift 4s linear infinite;
+}
+
+.sprite-frame img.mutation-radioactive {
+  animation: radioactivePulse 3.2s ease-in-out infinite;
+}
+
 .sprite-frame.rainbow {
   animation: rainbowGlow 3.6s linear infinite;
+}
+
+.sprite-frame.radioactive {
+  animation: radioactiveGlow 2.8s ease-in-out infinite;
 }
 
 .name-line {
@@ -240,6 +358,12 @@ body::after {
   animation: rainbowShift 4s ease infinite;
 }
 
+.trait-tag.radioactive {
+  background: linear-gradient(135deg, #f32f3b, #7a1b92, #27b55f, #7d562d);
+  background-size: 200% 200%;
+  animation: rainbowShift 5s ease infinite;
+}
+
 .rarity-tag {
   background: rgba(38, 20, 10, 0.08);
   color: rgba(38, 20, 10, 0.82);
@@ -255,9 +379,27 @@ body::after {
   color: #7d32ff;
 }
 
+.rarity-tag.god {
+  color: white;
+  background: linear-gradient(135deg, #ff3f81, #ff9d00, #18b8ff, #58d84f);
+  background-size: 200% 200%;
+  animation: rainbowShift 4s ease infinite;
+}
+
+.rarity-tag.uncommon {
+  background: rgba(31, 166, 86, 0.16);
+  color: #16854a;
+}
+
 .rarity-tag.mythic {
   background: rgba(227, 41, 41, 0.16);
   color: #cf1f1f;
+}
+
+.rarity-tag.secret {
+  background: linear-gradient(135deg, #111111, #f4f4f4);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .hidden {
@@ -311,6 +453,35 @@ body::after {
   font-size: 1.4rem;
 }
 
+.event-timer-card {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(38, 20, 10, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.event-timer-card span {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.event-timer-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.4rem;
+}
+
+.event-timer-card.rainbow {
+  background: linear-gradient(135deg, rgba(255, 91, 143, 0.18), rgba(255, 214, 120, 0.35), rgba(24, 184, 255, 0.18));
+}
+
+.event-timer-card.radioactive {
+  background: linear-gradient(135deg, rgba(228, 41, 64, 0.2), rgba(115, 30, 164, 0.25), rgba(48, 164, 86, 0.2));
+}
+
 .button-row {
   display: flex;
   gap: 14px;
@@ -356,6 +527,27 @@ body::after {
   cursor: not-allowed;
   transform: none;
   filter: none;
+}
+
+.mini-action {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff8f1f, #ff4e36);
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.mini-action:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.mini-action:active {
+  transform: translateY(0);
 }
 
 .rebirth-grid,
@@ -414,6 +606,34 @@ body::after {
   transform: translateY(0);
 }
 
+.admin-panel {
+  min-height: 360px;
+}
+
+.admin-auth-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.admin-input,
+.admin-select {
+  width: 100%;
+  border: 1px solid rgba(38, 20, 10, 0.12);
+  border-radius: 18px;
+  padding: 16px 18px;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.admin-input:focus,
+.admin-select:focus {
+  outline: 2px solid rgba(40, 112, 255, 0.22);
+  border-color: rgba(40, 112, 255, 0.35);
+}
+
 .status-text {
   margin: 18px 4px 0;
   min-height: 1.2rem;
@@ -435,6 +655,18 @@ body::after {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(38, 20, 10, 0.08);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.owned-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(40, 112, 255, 0.2);
+}
+
+.owned-card.selected {
+  border-color: rgba(40, 112, 255, 0.38);
+  box-shadow: 0 12px 28px rgba(40, 112, 255, 0.12);
 }
 
 .owned-thumb {
@@ -442,6 +674,14 @@ body::after {
   height: 72px;
   object-fit: cover;
   border-radius: 18px;
+}
+
+.owned-thumb.cutout-image {
+  object-fit: contain;
+  padding: 8px;
+  background:
+    radial-gradient(circle at center, rgba(255, 244, 222, 0.96), rgba(255, 255, 255, 0.84));
+  border: 1px solid rgba(38, 20, 10, 0.08);
 }
 
 .owned-name {
@@ -497,6 +737,48 @@ body::after {
   }
 }
 
+@keyframes radioactiveGlow {
+  0% {
+    box-shadow: inset 0 0 0 4px rgba(230, 54, 66, 0.5), 0 0 20px rgba(125, 86, 45, 0.15);
+  }
+  33% {
+    box-shadow: inset 0 0 0 4px rgba(119, 30, 146, 0.52), 0 0 26px rgba(119, 30, 146, 0.18);
+  }
+  66% {
+    box-shadow: inset 0 0 0 4px rgba(40, 181, 95, 0.52), 0 0 28px rgba(40, 181, 95, 0.18);
+  }
+  100% {
+    box-shadow: inset 0 0 0 4px rgba(125, 86, 45, 0.5), 0 0 20px rgba(125, 86, 45, 0.15);
+  }
+}
+
+@keyframes rainbowImageShift {
+  0% {
+    filter: hue-rotate(0deg) saturate(1.15) brightness(1.03);
+  }
+  100% {
+    filter: hue-rotate(360deg) saturate(1.2) brightness(1.05);
+  }
+}
+
+@keyframes radioactivePulse {
+  0% {
+    filter: hue-rotate(0deg) saturate(1.25) brightness(0.98) contrast(1.1) drop-shadow(0 0 0.35rem rgba(230, 54, 66, 0.38));
+  }
+  25% {
+    filter: hue-rotate(26deg) saturate(1.35) brightness(1.02) contrast(1.15) drop-shadow(0 0 0.45rem rgba(119, 30, 146, 0.42));
+  }
+  50% {
+    filter: hue-rotate(94deg) saturate(1.4) brightness(1.05) contrast(1.16) drop-shadow(0 0 0.5rem rgba(40, 181, 95, 0.45));
+  }
+  75% {
+    filter: hue-rotate(-18deg) saturate(1.28) brightness(1.01) contrast(1.13) drop-shadow(0 0 0.4rem rgba(125, 86, 45, 0.42));
+  }
+  100% {
+    filter: hue-rotate(0deg) saturate(1.25) brightness(0.98) contrast(1.1) drop-shadow(0 0 0.35rem rgba(230, 54, 66, 0.38));
+  }
+}
+
 @media (max-width: 960px) {
   .topbar,
   .sprite-card,
@@ -525,6 +807,10 @@ body::after {
   .character-stats,
   .rebirth-grid,
   .rebirth-info {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-auth-row {
     grid-template-columns: 1fr;
   }
 

@@ -1,4 +1,5 @@
 import json
+import socket
 from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -47,11 +48,23 @@ def create_server(host: str, start_port: int, attempts: int = 20) -> Tuple[Threa
     raise OSError(f"Could not bind a local port in range {start_port}-{start_port + attempts - 1}")
 
 
+def get_lan_ip() -> str | None:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        return None
+
+
 def main() -> None:
     host = "127.0.0.1"
     server, port = create_server(host, 8010)
+    lan_ip = get_lan_ip()
 
-    print(f"Serving brainrot idle game at http://{host}:{port}")
+    print(f"Serving brainrot idle game at http://127.0.0.1:{port}")
+    if lan_ip:
+        print(f"Open on phones/iPads on the same Wi-Fi: http://{lan_ip}:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
