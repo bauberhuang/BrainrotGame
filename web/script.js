@@ -42,7 +42,7 @@ const characters = [
     cost: 25,
     income: 2.5,
     flavor: "flying across the sea!",
-    img: "img/FluriFlura.webp",
+    img: "img/Fluriflura.webp",
   },
   {
     id: "strawberry-elephant",
@@ -104,10 +104,135 @@ const luckyBlockCharacters = [
   },
 ];
 
+const adminOnlyCharacters = [];
+
+const SAILING_DURATION_MS = 60 * 1000;
+const MAX_SAILS_PER_TRIP = 1e18;
+const SAILING_BOAT_IMAGE =
+  "https://commons.wikimedia.org/wiki/Special:FilePath/Sailboat%20illustration.png";
+
+const sailingBoats = [
+  {
+    id: "traveler-boat",
+    name: "Boat for Travelers",
+    brainrotChance: 0.05,
+    cost: 1e7,
+    flavor: "Cheap starter boat. It only has a small shot at bringing a brainrot back.",
+  },
+  {
+    id: "expert-boat",
+    name: "Boat for Experts",
+    brainrotChance: 0.2,
+    cost: 1e13,
+    flavor: "A serious brainrot hunting vessel with better odds.",
+  },
+  {
+    id: "super-boat",
+    name: "Super Boat",
+    brainrotChance: 0.5,
+    cost: 1e15,
+    flavor: "Half your sails should come back with something strange.",
+  },
+  {
+    id: "god-boat",
+    name: "God Boat",
+    brainrotChance: 0.99,
+    cost: 1e18,
+    flavor: "Almost every trip returns with a brainrot reward.",
+  },
+  {
+    id: "infinite-boat",
+    name: "Infinite Boat",
+    brainrotChance: 1,
+    cost: 1e20,
+    moneyBonusChance: 0.1,
+    moneyBonusMin: 1e16,
+    moneyBonusMax: 1e17,
+    flavor: "Guaranteed brainrot haul, with a chance to drag back a giant QA money bonus too.",
+  },
+];
+
+const sailingIslands = [
+  {
+    id: "legendary-island",
+    name: "Legendary Island",
+    flavor: "OG brainrots, 2000s cool stuff, already dead but still flashing with bright light",
+    rewards: [
+      {
+        id: "dancing-banana",
+        name: "Dancing Banana",
+        sailingValue: 5,
+        income: 2500,
+        flavor: "A washed-up letter from a golden island. Somehow it still earns money.",
+        img: "img/banana.jfif",
+      },
+      {
+        id: "legendary-b",
+        name: "Legendary B",
+        sailingValue: 3,
+        income: 12500,
+        flavor: "The island smiths forged this B out of pure legendary nonsense.",
+        img: createLetterBrainrotImage("B", "#ffd966", "#ff8a00"),
+      },
+      {
+        id: "legendary-c",
+        name: "Legendary C",
+        sailingValue: 1,
+        income: 50000,
+        flavor: "A rare C that glows like treasure whenever the boat returns.",
+        img: createLetterBrainrotImage("C", "#fff3a1", "#ff5e00"),
+      },
+    ],
+  },
+  {
+    id: "unknown-island",
+    name: "Unknown Island",
+    flavor: "A mystery island config in JS so you can drop more islands in later without changing the whole system.",
+    rewards: [
+      {
+        id: "unknown-a",
+        name: "Unknown A",
+        sailingValue: 5,
+        income: 1800,
+        flavor: "No one knows what this A is doing here. It just showed up dripping seawater.",
+        img: createLetterBrainrotImage("A", "#8ad3ff", "#3467eb"),
+      },
+      {
+        id: "unknown-b",
+        name: "Unknown B",
+        sailingValue: 3,
+        income: 9000,
+        flavor: "A suspicious blue B from the foggy side of the map.",
+        img: createLetterBrainrotImage("B", "#7ef0cf", "#2f9d8f"),
+      },
+      {
+        id: "unknown-c",
+        name: "Unknown C",
+        sailingValue: 1,
+        income: 36000,
+        flavor: "This C arrived with no label, no crew, and way too much passive income.",
+        img: createLetterBrainrotImage("C", "#d4b8ff", "#6d37d9"),
+      },
+      {
+        id: "Eatshit",
+        name: "Eatshit",
+        sailingValue: 0.00001,
+        income: 3600000000,
+        flavor: "The forbidden island reward. Sailors whisper the name and then pretend they never saw it.",
+        img: "img/Eatshit.jpeg",
+      },
+    ],
+  },
+];
+
+
 const RAINBOW_CHANCE = 0.1;
 const RAINBOW_MULTIPLIER = 1.5;
 const RADIOACTIVE_CHANCE = 0.01;
 const RADIOACTIVE_MULTIPLIER = 3.5;
+const SAILING_RAINBOW_CHANCE = 0.1;
+const SAILING_RADIOACTIVE_CHANCE = 0.001;
+const SAILING_EVENT_MUTATION_BONUS = 0.05;
 const MAX_REBIRTHS = 20;
 const AUTO_ROLL_SECONDS = 10;
 const EVENT_INTERVAL_SECONDS = 60 * 60;
@@ -147,10 +272,13 @@ const dom = {
   mainPage: document.querySelector("#mainPage"),
   rebirthPage: document.querySelector("#rebirthPage"),
   adminPage: document.querySelector("#adminPage"),
+  sailingPage: document.querySelector("#sailingPage"),
   rebirthPageButton: document.querySelector("#rebirthPageButton"),
   adminAuthButton: document.querySelector("#adminAuthButton"),
+  sailingPageButton: document.querySelector("#sailingPageButton"),
   backToGameButton: document.querySelector("#backToGameButton"),
   adminBackButton: document.querySelector("#adminBackButton"),
+  sailingBackButton: document.querySelector("#sailingBackButton"),
   rebirthCountDisplay: document.querySelector("#rebirthCountDisplay"),
   cashMultiplierDisplay: document.querySelector("#cashMultiplierDisplay"),
   nextMultiplierDisplay: document.querySelector("#nextMultiplierDisplay"),
@@ -203,12 +331,43 @@ const dom = {
   adminSetEventButton: document.querySelector("#adminSetEventButton"),
   adminClearEventButton: document.querySelector("#adminClearEventButton"),
   adminSpawnerStatusText: document.querySelector("#adminSpawnerStatusText"),
+  sailingBoatImage: document.querySelector("#sailingBoatImage"),
+  sailingIslandName: document.querySelector("#sailingIslandName"),
+  sailingChanceTag: document.querySelector("#sailingChanceTag"),
+  sailingIslandFlavor: document.querySelector("#sailingIslandFlavor"),
+  sailingIslandSelect: document.querySelector("#sailingIslandSelect"),
+  sailingBoatSelect: document.querySelector("#sailingBoatSelect"),
+  sailingAmountInput: document.querySelector("#sailingAmountInput"),
+  sailingCostDisplay: document.querySelector("#sailingCostDisplay"),
+  sailingTimerDisplay: document.querySelector("#sailingTimerDisplay"),
+  sailingActiveCountDisplay: document.querySelector("#sailingActiveCountDisplay"),
+  sailingRewardPreview: document.querySelector("#sailingRewardPreview"),
+  sailingConfirmButton: document.querySelector("#sailingConfirmButton"),
+  sailingStatusText: document.querySelector("#sailingStatusText"),
 };
 
 const characterById = Object.fromEntries(characters.map((entry) => [entry.id, entry]));
 const totalCharacterValue = characters.reduce((total, entry) => total + entry.value, 0);
 const luckyBlockCharacterById = Object.fromEntries(
   luckyBlockCharacters.map((entry) => [entry.id, entry]),
+);
+const adminOnlyCharacterById = Object.fromEntries(
+  adminOnlyCharacters.map((entry) => [entry.id, entry]),
+);
+const sailingIslandById = Object.fromEntries(sailingIslands.map((entry) => [entry.id, entry]));
+const sailingBoatById = Object.fromEntries(sailingBoats.map((entry) => [entry.id, entry]));
+const sailingRewardCharacters = sailingIslands.flatMap((island) =>
+  island.rewards.map((reward) => ({
+    ...reward,
+    value: reward.sailingValue,
+    islandId: island.id,
+    islandName: island.name,
+    flavor: reward.flavor || `${reward.name} is a sailing reward from ${island.name}.`,
+    isSailingReward: true,
+  })),
+);
+const sailingRewardCharacterById = Object.fromEntries(
+  sailingRewardCharacters.map((entry) => [entry.id, entry]),
 );
 const defaultLuckyBlockIds = luckyBlockCharacters
   .filter((entry) => !entry.luckyBlockOnly)
@@ -225,6 +384,12 @@ function createDefaultState() {
     currentRoll: null,
     owned: {},
     rebirthCount: 0,
+    sailing: {
+      selectedIslandId: sailingIslands[0].id,
+      selectedBoatId: sailingBoats[0].id,
+      amount: 1,
+      jobs: [],
+    },
     event: {
       activeMutation: null,
       endsAt: 0,
@@ -256,6 +421,31 @@ function normalizeCurrentRoll(currentRoll) {
   };
 }
 
+function normalizeSailingJob(job = {}) {
+  const islandId = sailingIslandById[job.islandId] ? job.islandId : sailingIslands[0].id;
+  const boatId = sailingBoatById[job.boatId] ? job.boatId : sailingBoats[0].id;
+  return {
+    id: job.id || `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    islandId,
+    boatId,
+    amount: Math.max(1, Math.min(MAX_SAILS_PER_TRIP, Number(job.amount) || 1)),
+    endsAt: Number(job.endsAt) || Date.now() + SAILING_DURATION_MS,
+  };
+}
+
+function normalizeSailingState(sailing = {}) {
+  return {
+    selectedIslandId: sailingIslandById[sailing.selectedIslandId]
+      ? sailing.selectedIslandId
+      : sailingIslands[0].id,
+    selectedBoatId: sailingBoatById[sailing.selectedBoatId]
+      ? sailing.selectedBoatId
+      : sailingBoats[0].id,
+    amount: Math.max(1, Math.min(MAX_SAILS_PER_TRIP, Number(sailing.amount) || 1)),
+    jobs: Array.isArray(sailing.jobs) ? sailing.jobs.map(normalizeSailingJob) : [],
+  };
+}
+
 function loadState() {
   const fallback = createDefaultState();
 
@@ -276,6 +466,7 @@ function loadState() {
       currentRoll: normalizeCurrentRoll(parsed.currentRoll),
       owned: normalizedOwned,
       rebirthCount: Math.max(0, Math.min(MAX_REBIRTHS, Number(parsed.rebirthCount) || 0)),
+      sailing: normalizeSailingState(parsed.sailing),
       event: {
         activeMutation: MUTATIONS[parsedEvent.activeMutation] ? parsedEvent.activeMutation : null,
         endsAt: Number(parsedEvent.endsAt) || 0,
@@ -300,6 +491,13 @@ function saveState() {
 
 function formatMoney(value) {
   const tiers = [
+    { limit: 1e100, suffix: "GOL", divisor: 1e100, decimals: 3 },
+    { limit: 1e36, suffix: "UD", divisor: 1e36, decimals: 3 },
+    { limit: 1e33, suffix: "DC", divisor: 1e33, decimals: 3 },
+    { limit: 1e30, suffix: "NO", divisor: 1e30, decimals: 3 },
+    { limit: 1e27, suffix: "OC", divisor: 1e27, decimals: 3 },
+    { limit: 1e24, suffix: "SP", divisor: 1e24, decimals: 3 },
+    { limit: 1e21, suffix: "SX", divisor: 1e21, decimals: 3 },
     { limit: 1e18, suffix: "QI", divisor: 1e18, decimals: 3 },
     { limit: 1e15, suffix: "QA", divisor: 1e15, decimals: 3 },
     { limit: 1e12, suffix: "T", divisor: 1e12, decimals: 3 },
@@ -327,6 +525,22 @@ function formatCountdown(milliseconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
+
+function createLetterBrainrotImage(letter, startColor, endColor) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${startColor}" />
+          <stop offset="100%" stop-color="${endColor}" />
+        </linearGradient>
+      </defs>
+      <rect width="240" height="240" rx="44" fill="url(#bg)" />
+      <text x="50%" y="56%" text-anchor="middle" font-size="116" font-family="Arial, sans-serif" font-weight="700" fill="white">${letter}</text>
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function getRarityLabel(value, percent = null) {
@@ -469,6 +683,26 @@ function getOwnedCharacterData(characterId) {
     };
   }
 
+  if (adminOnlyCharacterById[characterId]) {
+    return adminOnlyCharacterById[characterId];
+  }
+
+  if (sailingRewardCharacterById[characterId]) {
+    const sailingCharacter = sailingRewardCharacterById[characterId];
+    return {
+      id: sailingCharacter.id,
+      name: sailingCharacter.name,
+      value: sailingCharacter.value ?? sailingCharacter.sailingValue ?? 0,
+      cost: Number(sailingCharacter.cost) || 0,
+      income: Number(sailingCharacter.income) || 0,
+      flavor:
+        sailingCharacter.flavor
+        || `${sailingCharacter.name} is a sailing reward from ${sailingCharacter.islandName || "the harbor"}.`,
+      img: sailingCharacter.img,
+      isSailingReward: true,
+    };
+  }
+
   return {
     id: characterId,
     name: characterId,
@@ -479,6 +713,15 @@ function getOwnedCharacterData(characterId) {
     img: "",
     isLuckyBlockReward: true,
   };
+}
+
+function isKnownCharacterId(characterId) {
+  return Boolean(
+    characterById[characterId]
+    || luckyBlockCharacterById[characterId]
+    || adminOnlyCharacterById[characterId]
+    || sailingRewardCharacterById[characterId],
+  );
 }
 
 function isCutoutCharacterImage(character) {
@@ -492,6 +735,167 @@ function getLuckyBlockInventory() {
     rainbowCount: luckyBlockEntry?.rainbowCount || 0,
     radioactiveCount: luckyBlockEntry?.radioactiveCount || 0,
   };
+}
+
+function getCurrentSailingIsland() {
+  return sailingIslandById[state.sailing.selectedIslandId] || sailingIslands[0];
+}
+
+function getCurrentSailingBoat() {
+  return sailingBoatById[state.sailing.selectedBoatId] || sailingBoats[0];
+}
+
+function getSailingCost() {
+  return getCurrentSailingBoat().cost * state.sailing.amount;
+}
+
+function getTotalActiveSails() {
+  return state.sailing.jobs.reduce((total, job) => total + job.amount, 0);
+}
+
+function getNextSailingReturnTime() {
+  if (state.sailing.jobs.length === 0) {
+    return null;
+  }
+
+  return Math.min(...state.sailing.jobs.map((job) => job.endsAt));
+}
+
+function setSailingStatus(message) {
+  if (dom.sailingStatusText) {
+    dom.sailingStatusText.textContent = message;
+  }
+}
+
+function getApproximateSuccessCount(amount, chance) {
+  if (amount <= 5000) {
+    let successes = 0;
+    for (let index = 0; index < amount; index += 1) {
+      if (Math.random() < chance) {
+        successes += 1;
+      }
+    }
+    return successes;
+  }
+
+  const mean = amount * chance;
+  const variance = Math.sqrt(amount * chance * (1 - chance));
+  const wobble = (Math.random() - 0.5) * 2 * variance;
+  return Math.max(0, Math.min(amount, Math.round(mean + wobble)));
+}
+
+function distributeSailingRewards(successCount, rewards) {
+  if (successCount <= 0) {
+    return [];
+  }
+
+  const totalValue = rewards.reduce((total, reward) => total + reward.sailingValue, 0);
+  if (successCount <= 5000) {
+    const counts = new Map();
+    for (let index = 0; index < successCount; index += 1) {
+      const selectedReward = rollByWeight(rewards, "sailingValue");
+      counts.set(selectedReward.id, (counts.get(selectedReward.id) || 0) + 1);
+    }
+    return rewards
+      .map((reward) => ({ reward, count: counts.get(reward.id) || 0 }))
+      .filter((entry) => entry.count > 0);
+  }
+
+  let assigned = 0;
+  return rewards.map((reward, index) => {
+    const isLast = index === rewards.length - 1;
+    const count = isLast
+      ? successCount - assigned
+      : Math.max(0, Math.round((successCount * reward.sailingValue) / totalValue));
+    assigned += count;
+    return { reward, count };
+  }).filter((entry) => entry.count > 0);
+}
+
+function splitSailingRewardMutations(amount) {
+  if (amount <= 0) {
+    return {
+      normal: 0,
+      rainbow: 0,
+      radioactive: 0,
+    };
+  }
+
+  const radioactiveChance = getSailingMutationChance("radioactive");
+  const rainbowChance = getSailingMutationChance("rainbow");
+  const radioactiveCount = getApproximateSuccessCount(amount, radioactiveChance);
+  const remainingAfterRadioactive = Math.max(0, amount - radioactiveCount);
+  const rainbowCount = getApproximateSuccessCount(remainingAfterRadioactive, rainbowChance);
+
+  return {
+    normal: Math.max(0, amount - radioactiveCount - rainbowCount),
+    rainbow: rainbowCount,
+    radioactive: radioactiveCount,
+  };
+}
+
+function getInfiniteBoatBonus(amount, boat) {
+  if (!boat.moneyBonusChance || !boat.moneyBonusMin || !boat.moneyBonusMax) {
+    return 0;
+  }
+
+  const bonusTrips = getApproximateSuccessCount(amount, boat.moneyBonusChance);
+  if (bonusTrips <= 0) {
+    return 0;
+  }
+
+  const averageBonus = (boat.moneyBonusMin + boat.moneyBonusMax) / 2;
+  return bonusTrips * averageBonus;
+}
+
+function resolveFinishedSailingJobs() {
+  if (!state.sailing?.jobs?.length) {
+    return;
+  }
+
+  const now = Date.now();
+  const completedJobs = state.sailing.jobs.filter((job) => job.endsAt <= now);
+  if (completedJobs.length === 0) {
+    return;
+  }
+
+  state.sailing.jobs = state.sailing.jobs.filter((job) => job.endsAt > now);
+
+  let totalRewardedBrainrots = 0;
+  let totalMoneyBonus = 0;
+
+  for (const job of completedJobs) {
+    const island = sailingIslandById[job.islandId] || sailingIslands[0];
+    const boat = sailingBoatById[job.boatId] || sailingBoats[0];
+    const successCount = getApproximateSuccessCount(job.amount, boat.brainrotChance);
+    const rewards = distributeSailingRewards(successCount, island.rewards);
+
+    for (const entry of rewards) {
+      const mutationCounts = splitSailingRewardMutations(entry.count);
+      if (mutationCounts.normal > 0) {
+        grantOwnedCharacter(entry.reward.id, "normal", mutationCounts.normal);
+      }
+      if (mutationCounts.rainbow > 0) {
+        grantOwnedCharacter(entry.reward.id, "rainbow", mutationCounts.rainbow);
+      }
+      if (mutationCounts.radioactive > 0) {
+        grantOwnedCharacter(entry.reward.id, "radioactive", mutationCounts.radioactive);
+      }
+      totalRewardedBrainrots += entry.count;
+    }
+
+    totalMoneyBonus += getInfiniteBoatBonus(job.amount, boat);
+  }
+
+  if (totalMoneyBonus > 0) {
+    state.money += totalMoneyBonus;
+  }
+
+  setSailingStatus(
+    totalMoneyBonus > 0
+      ? `Sails returned with ${totalRewardedBrainrots} brainrots and ${formatMoney(totalMoneyBonus)} bonus cash.`
+      : `Sails returned with ${totalRewardedBrainrots} brainrots.`,
+  );
 }
 
 function getMutationConfig(mutation) {
@@ -513,6 +917,18 @@ function getMutationChance(mutation) {
 
   if (mutation === "radioactive") {
     return state.event.activeMutation === "radioactive" ? 0.1 : RADIOACTIVE_CHANCE;
+  }
+
+  return 0;
+}
+
+function getSailingMutationChance(mutation) {
+  if (mutation === "rainbow") {
+    return SAILING_RAINBOW_CHANCE + (state.event.activeMutation === "rainbow" ? SAILING_EVENT_MUTATION_BONUS : 0);
+  }
+
+  if (mutation === "radioactive") {
+    return SAILING_RADIOACTIVE_CHANCE + (state.event.activeMutation === "radioactive" ? SAILING_EVENT_MUTATION_BONUS : 0);
   }
 
   return 0;
@@ -579,8 +995,27 @@ function setAdminSpawnerStatus(message) {
 }
 
 function getAdminSpawnables() {
-  const combined = [...characters, ...luckyBlockCharacters];
-  return combined.filter((entry, index, array) => array.findIndex((item) => item.id === entry.id) === index);
+  const combined = [
+    ...characters,
+    ...luckyBlockCharacters,
+    ...sailingRewardCharacters,
+    ...adminOnlyCharacters,
+  ];
+  const uniqueEntries = combined.filter(
+    (entry, index, array) => array.findIndex((item) => item.id === entry.id) === index,
+  );
+
+  return uniqueEntries.sort((left, right) => {
+    if (left.adminOnly && !right.adminOnly) {
+      return -1;
+    }
+
+    if (!left.adminOnly && right.adminOnly) {
+      return 1;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
 }
 
 function renderAdminBrainrotOptions() {
@@ -588,10 +1023,20 @@ function renderAdminBrainrotOptions() {
     return;
   }
 
+  const previousValue = dom.adminBrainrotSelect.value;
   const options = getAdminSpawnables()
     .map((entry) => `<option value="${entry.id}">${entry.name}</option>`)
     .join("");
   dom.adminBrainrotSelect.innerHTML = options;
+
+  const hasPreviousValue = getAdminSpawnables().some((entry) => entry.id === previousValue);
+  if (hasPreviousValue) {
+    dom.adminBrainrotSelect.value = previousValue;
+    return;
+  }
+
+  const defaultAdminOnly = adminOnlyCharacters[0]?.id;
+  dom.adminBrainrotSelect.value = defaultAdminOnly || getAdminSpawnables()[0]?.id || "";
 }
 
 function renderAdminMutationOptions() {
@@ -622,6 +1067,9 @@ function renderAdminTools() {
     return;
   }
 
+  renderAdminBrainrotOptions();
+  renderAdminMutationOptions();
+  renderAdminEventOptions();
   dom.adminSetMoneyInput.value = `${Math.floor(state.money * 100) / 100}`;
   dom.adminSetRebirthInput.value = `${state.rebirthCount}`;
   if (dom.adminMutationSelect) {
@@ -632,16 +1080,76 @@ function renderAdminTools() {
   }
 }
 
+function renderSailingIslandOptions() {
+  if (!dom.sailingIslandSelect) {
+    return;
+  }
+
+  dom.sailingIslandSelect.innerHTML = sailingIslands
+    .map((island) => `<option value="${island.id}">${island.name}</option>`)
+    .join("");
+  dom.sailingIslandSelect.value = getCurrentSailingIsland().id;
+}
+
+function renderSailingBoatOptions() {
+  if (!dom.sailingBoatSelect) {
+    return;
+  }
+
+  dom.sailingBoatSelect.innerHTML = sailingBoats
+    .map((boat) => `<option value="${boat.id}">${boat.name}</option>`)
+    .join("");
+  dom.sailingBoatSelect.value = getCurrentSailingBoat().id;
+}
+
 function showOnlyPage(targetPage) {
   dom.mainPage.classList.add("hidden");
   dom.rebirthPage.classList.add("hidden");
   dom.adminPage.classList.add("hidden");
+  dom.sailingPage.classList.add("hidden");
   targetPage.classList.remove("hidden");
 }
 
 function renderAdminView() {
   dom.adminAuthView.classList.toggle("hidden", adminAuthorized);
   dom.adminSpawnerView.classList.toggle("hidden", !adminAuthorized);
+}
+
+function renderSailingPage() {
+  if (!dom.sailingPage) {
+    return;
+  }
+
+  const island = getCurrentSailingIsland();
+  const boat = getCurrentSailingBoat();
+  const canAfford = state.money >= getSailingCost();
+  const nextReturn = getNextSailingReturnTime();
+
+  renderSailingIslandOptions();
+  renderSailingBoatOptions();
+  dom.sailingBoatImage.src = SAILING_BOAT_IMAGE;
+  dom.sailingBoatImage.alt = boat.name;
+  dom.sailingIslandName.textContent = island.name;
+  dom.sailingChanceTag.textContent = `${Math.round(boat.brainrotChance * 100)}% Reward Rate`;
+  dom.sailingIslandFlavor.textContent = `${island.flavor} ${boat.flavor}`;
+  dom.sailingAmountInput.value = `${state.sailing.amount}`;
+  dom.sailingCostDisplay.textContent = formatMoney(getSailingCost());
+  dom.sailingActiveCountDisplay.textContent = `${getTotalActiveSails()}`;
+  dom.sailingTimerDisplay.textContent = nextReturn ? formatCountdown(nextReturn - Date.now()) : "Ready";
+  dom.sailingConfirmButton.disabled = !canAfford;
+  dom.sailingRewardPreview.innerHTML = island.rewards
+    .map(
+      (reward) => `
+        <article class="sailing-reward-card">
+          <img class="owned-thumb" src="${reward.img}" alt="${reward.name}" />
+          <div>
+            <p class="owned-name">${reward.name}</p>
+            <p class="owned-meta">${formatMoney(reward.income)}/s</p>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function isLuckyBlockRewardCharacter(characterId) {
@@ -961,6 +1469,7 @@ function render() {
   renderCurrentRoll();
   renderRollTimer();
   renderEventTimer();
+  renderSailingPage();
   updateActionButtons();
   renderCollectionActions();
   renderOwned();
@@ -1094,6 +1603,16 @@ function closeAdminPage() {
   showOnlyPage(dom.mainPage);
 }
 
+function openSailingPage() {
+  showOnlyPage(dom.sailingPage);
+  renderSailingPage();
+  setSailingStatus("Choose an island, boat, and sail amount.");
+}
+
+function closeSailingPage() {
+  showOnlyPage(dom.mainPage);
+}
+
 function submitAdminPassword() {
   if (dom.adminPasswordInput.value === ADMIN_PASSWORD) {
     adminAuthorized = true;
@@ -1119,11 +1638,18 @@ function adminSpawnBrainrots() {
   const mutation = dom.adminMutationSelect.value;
   const characterId = dom.adminBrainrotSelect.value;
   const amount = Math.max(1, Math.min(1e18, Number(dom.adminAmountInput.value) || 1));
+  const character = getOwnedCharacterData(characterId);
+
+  if (!characterId || !isKnownCharacterId(characterId)) {
+    setAdminSpawnerStatus("Choose a valid brainrot first.");
+    return;
+  }
 
   grantOwnedCharacter(characterId, mutation, amount);
+  selectedOwnedCharacterId = characterId;
   render();
   setAdminSpawnerStatus(
-    `Spawned ${amount} ${getMutationDisplayName(mutation).toLowerCase()} ${getOwnedCharacterData(characterId).name} into your collection.`,
+    `Spawned ${amount} ${getMutationDisplayName(mutation).toLowerCase()} ${character.name} into your collection.`,
   );
 }
 
@@ -1198,6 +1724,62 @@ function adminClearEvent() {
   setAdminSpawnerStatus("Event turned off.");
 }
 
+function handleSailingIslandChange() {
+  if (!dom.sailingIslandSelect) {
+    return;
+  }
+
+  state.sailing.selectedIslandId = dom.sailingIslandSelect.value;
+  render();
+}
+
+function handleSailingBoatChange() {
+  if (!dom.sailingBoatSelect) {
+    return;
+  }
+
+  state.sailing.selectedBoatId = dom.sailingBoatSelect.value;
+  render();
+}
+
+function handleSailingAmountInput() {
+  if (!dom.sailingAmountInput) {
+    return;
+  }
+
+  state.sailing.amount = Math.max(
+    1,
+    Math.min(MAX_SAILS_PER_TRIP, Math.floor(Number(dom.sailingAmountInput.value) || 1)),
+  );
+  render();
+}
+
+function startSailing() {
+  const boat = getCurrentSailingBoat();
+  const cost = getSailingCost();
+
+  if (state.money < cost) {
+    setSailingStatus(`You need ${formatMoney(cost)} to launch this sail.`);
+    render();
+    return;
+  }
+
+  state.money -= cost;
+  state.sailing.jobs.push(
+    normalizeSailingJob({
+      islandId: getCurrentSailingIsland().id,
+      boatId: boat.id,
+      amount: state.sailing.amount,
+      endsAt: Date.now() + SAILING_DURATION_MS,
+    }),
+  );
+
+  setSailingStatus(
+    `Sent ${state.sailing.amount} sail${state.sailing.amount === 1 ? "" : "s"} to ${getCurrentSailingIsland().name}. Return time: 1 minute.`,
+  );
+  render();
+}
+
 function tryRebirth() {
   if (state.rebirthCount >= MAX_REBIRTHS) {
     setRebirthStatus("You already reached the max rebirth level.");
@@ -1214,6 +1796,7 @@ function tryRebirth() {
   state.money = 10;
   state.currentRoll = null;
   state.owned = {};
+  state.sailing = normalizeSailingState();
   state.event = {
     activeMutation: null,
     endsAt: 0,
@@ -1324,6 +1907,7 @@ function selectOwnedCharacter(event) {
 
 function tickIncome() {
   syncEventState();
+  resolveFinishedSailingJobs();
   state.money += getTotalIncomePerSecond();
 
   if (!state.event.activeMutation) {
@@ -1339,6 +1923,7 @@ function tickIncome() {
   renderTotals();
   renderRollTimer();
   renderEventTimer();
+  renderSailingPage();
   updateActionButtons();
   saveState();
 }
@@ -1358,8 +1943,10 @@ bindClick(dom.uncoverLuckyBlockButton, uncoverLuckyBlock);
 bindClick(dom.uncoverAllLuckyBlocksButton, uncoverAllLuckyBlocks);
 bindClick(dom.rebirthPageButton, openRebirthPage);
 bindClick(dom.adminAuthButton, openAdminPage);
+bindClick(dom.sailingPageButton, openSailingPage);
 bindClick(dom.backToGameButton, closeRebirthPage);
 bindClick(dom.adminBackButton, closeAdminPage);
+bindClick(dom.sailingBackButton, closeSailingPage);
 bindClick(dom.miniRebirthButton, tryRebirth);
 bindClick(dom.adminPasswordSubmitButton, submitAdminPassword);
 bindClick(dom.adminConfirmButton, adminSpawnBrainrots);
@@ -1367,6 +1954,7 @@ bindClick(dom.adminSetMoneyButton, adminSetMoney);
 bindClick(dom.adminSetRebirthButton, adminSetRebirth);
 bindClick(dom.adminSetEventButton, adminSetEvent);
 bindClick(dom.adminClearEventButton, adminClearEvent);
+bindClick(dom.sailingConfirmButton, startSailing);
 if (dom.adminPasswordInput) {
   dom.adminPasswordInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -1374,9 +1962,19 @@ if (dom.adminPasswordInput) {
     }
   });
 }
+if (dom.sailingIslandSelect) {
+  dom.sailingIslandSelect.addEventListener("change", handleSailingIslandChange);
+}
+if (dom.sailingBoatSelect) {
+  dom.sailingBoatSelect.addEventListener("change", handleSailingBoatChange);
+}
+if (dom.sailingAmountInput) {
+  dom.sailingAmountInput.addEventListener("input", handleSailingAmountInput);
+}
 
 awardOfflineIncome();
 syncEventState();
+resolveFinishedSailingJobs();
 ensureCurrentRoll();
 render();
 setStatus("Your idle run started with $10. Roll and build your brainrot factory.");

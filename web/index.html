@@ -36,6 +36,10 @@
             <span class="label">Admin</span>
             <strong>Admin Auth</strong>
           </button>
+          <button class="stat-pill stat-button sailing-launch" id="sailingPageButton" type="button">
+            <span class="label">Sailing</span>
+            <strong>Open Sailing</strong>
+          </button>
         </div>
       </header>
 
@@ -250,6 +254,69 @@
             </div>
             <p class="status-text" id="adminSpawnerStatusText">Spawn brainrots directly into your collection.</p>
           </div>
+        </article>
+      </section>
+
+      <section class="rebirth-page hidden" id="sailingPage">
+        <article class="rebirth-panel sailing-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Brainrot Harbor</p>
+              <h2>Sailing Dock</h2>
+            </div>
+            <button class="back-button" id="sailingBackButton" type="button">Back</button>
+          </div>
+
+          <article class="sprite-card compact-sailing-card">
+            <div class="sprite-frame sailing-boat-frame">
+              <img id="sailingBoatImage" alt="Sailing boat" />
+            </div>
+
+            <div class="sprite-copy">
+              <div class="name-line">
+                <h3 id="sailingIslandName">Legendary Island</h3>
+                <span class="rarity-tag" id="sailingChanceTag">5%</span>
+              </div>
+              <p class="flavor" id="sailingIslandFlavor"></p>
+
+              <div class="rebirth-info sailing-config-grid">
+                <div class="rebirth-info-block">
+                  <span class="label">Select Island</span>
+                  <select class="admin-select" id="sailingIslandSelect"></select>
+                </div>
+                <div class="rebirth-info-block">
+                  <span class="label">Choose Boat</span>
+                  <select class="admin-select" id="sailingBoatSelect"></select>
+                </div>
+                <div class="rebirth-info-block">
+                  <span class="label">How Many</span>
+                  <input class="admin-input" id="sailingAmountInput" type="number" min="1" max="1000000000000000000" value="1" />
+                </div>
+                <div class="rebirth-info-block">
+                  <span class="label">Sail Cost</span>
+                  <strong id="sailingCostDisplay">$10.000M</strong>
+                </div>
+              </div>
+
+              <div class="rebirth-info sailing-status-grid">
+                <div class="rebirth-info-block">
+                  <span class="label">Return In</span>
+                  <strong id="sailingTimerDisplay">1m 00s</strong>
+                </div>
+                <div class="rebirth-info-block">
+                  <span class="label">Active Sails</span>
+                  <strong id="sailingActiveCountDisplay">0</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="sailing-reward-strip" id="sailingRewardPreview"></div>
+
+          <div class="button-row">
+            <button class="game-button buy" id="sailingConfirmButton" type="button">Confirm Sail</button>
+          </div>
+          <p class="status-text" id="sailingStatusText">Choose an island, boat, and sail amount.</p>
         </article>
       </section>
     </main>

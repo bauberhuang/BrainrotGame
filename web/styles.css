@@ -235,6 +235,12 @@ body::after {
   color: var(--ink);
 }
 
+.sailing-launch {
+  min-height: 84px;
+  background: linear-gradient(135deg, #4bb4c6, #1f7cc6);
+  color: white;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -297,6 +303,14 @@ body::after {
 
 .compact-viewer {
   grid-template-columns: 140px minmax(0, 1fr);
+}
+
+.compact-sailing-card {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.sailing-boat-frame {
+  min-height: 220px;
 }
 
 .sprite-frame {
@@ -486,6 +500,32 @@ body::after {
   display: flex;
   gap: 14px;
   margin-top: 20px;
+}
+
+.sailing-config-grid {
+  margin-top: 10px;
+}
+
+.sailing-status-grid {
+  margin-top: 14px;
+}
+
+.sailing-reward-strip {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.sailing-reward-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(38, 20, 10, 0.08);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .game-button {
@@ -811,6 +851,11 @@ body::after {
   }
 
   .admin-auth-row {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-sailing-card,
+  .sailing-reward-strip {
     grid-template-columns: 1fr;
   }
 
