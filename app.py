@@ -64,8 +64,8 @@ def get_lan_ip() -> str | None:
 
 
 def main() -> None:
-    host = "127.0.0.1"
-    server, port = create_server(host, 8010)
+    host = "0.0.0.0"
+    server, port = create_server(host, 5002)
     lan_ip = get_lan_ip()
 
     print(f"Serving brainrot idle game at http://127.0.0.1:{port}")
