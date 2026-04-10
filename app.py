@@ -23,10 +23,10 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         route_map = {
-            "/": "/home.html",
-            "/admin": "/admin.html",
-            "/rebirth": "/rebirth.html",
-            "/sailing": "/sailing.html",
+            "/": "/html/home.html",
+            "/admin": "/html/admin.html",
+            "/rebirth": "/html/rebirth.html",
+            "/sailing": "/html/sailing.html",
         }
 
         if self.path in route_map:
