@@ -21,6 +21,19 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("Expires", "0")
         super().end_headers()
 
+    def do_GET(self) -> None:
+        route_map = {
+            "/": "/home.html",
+            "/admin": "/admin.html",
+            "/rebirth": "/rebirth.html",
+            "/sailing": "/sailing.html",
+        }
+
+        if self.path in route_map:
+            self.path = route_map[self.path]
+
+        super().do_GET()
+
     def do_POST(self) -> None:
         if self.path != "/reset":
             self.send_error(404, "Not Found")

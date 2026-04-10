@@ -109,7 +109,7 @@ const adminOnlyCharacters = [];
 const SAILING_DURATION_MS = 60 * 1000;
 const MAX_SAILS_PER_TRIP = 1e18;
 const SAILING_BOAT_IMAGE =
-  "https://commons.wikimedia.org/wiki/Special:FilePath/Sailboat%20illustration.png";
+  "https://commons.wikimedia.org/wiki/Special:Redirect/file/Sailboat_illustration.svg";
 
 const sailingBoats = [
   {
@@ -239,6 +239,8 @@ const EVENT_INTERVAL_SECONDS = 60 * 60;
 const EVENT_DURATION_MS = 5 * 60 * 1000;
 const SAVE_KEY = "brainrot-idle-save-v2";
 const ADMIN_PASSWORD = "Ab141130";
+const ADMIN_AUTH_KEY = "brainrot-admin-auth-until";
+const ADMIN_AUTH_DURATION_MS = 60 * 60 * 1000;
 
 const MUTATIONS = {
   normal: {
@@ -264,6 +266,14 @@ const MUTATIONS = {
 const EVENT_MUTATION_WEIGHTS = {
   rainbow: 4,
   radioactive: 1,
+};
+
+const CURRENT_PAGE = window.BRAINROT_PAGE || "home";
+const PAGE_ROUTES = {
+  home: "/",
+  admin: "/admin",
+  rebirth: "/rebirth",
+  sailing: "/sailing",
 };
 
 const dom = {
@@ -375,7 +385,7 @@ const defaultLuckyBlockIds = luckyBlockCharacters
 
 const state = loadState();
 let autoRollRemaining = AUTO_ROLL_SECONDS;
-let adminAuthorized = false;
+let adminAuthorized = loadAdminAuthorization();
 let selectedOwnedCharacterId = null;
 
 function createDefaultState() {
@@ -487,6 +497,27 @@ function saveState() {
       lastTick: Date.now(),
     }),
   );
+}
+
+function loadAdminAuthorization() {
+  try {
+    const expiresAt = Number(localStorage.getItem(ADMIN_AUTH_KEY)) || 0;
+    return expiresAt > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function saveAdminAuthorization(enabled) {
+  try {
+    if (enabled) {
+      localStorage.setItem(ADMIN_AUTH_KEY, `${Date.now() + ADMIN_AUTH_DURATION_MS}`);
+    } else {
+      localStorage.removeItem(ADMIN_AUTH_KEY);
+    }
+  } catch {
+    return;
+  }
 }
 
 function formatMoney(value) {
@@ -1062,6 +1093,7 @@ function renderAdminEventOptions() {
 }
 
 function renderAdminTools() {
+  adminAuthorized = loadAdminAuthorization();
   renderAdminView();
   if (!adminAuthorized) {
     return;
@@ -1100,6 +1132,36 @@ function renderSailingBoatOptions() {
     .map((boat) => `<option value="${boat.id}">${boat.name}</option>`)
     .join("");
   dom.sailingBoatSelect.value = getCurrentSailingBoat().id;
+}
+
+function getPageElement(page) {
+  if (page === "admin") {
+    return dom.adminPage;
+  }
+
+  if (page === "rebirth") {
+    return dom.rebirthPage;
+  }
+
+  if (page === "sailing") {
+    return dom.sailingPage;
+  }
+
+  return dom.mainPage;
+}
+
+function navigateToPage(page) {
+  const route = PAGE_ROUTES[page] || PAGE_ROUTES.home;
+  if (CURRENT_PAGE === page) {
+    showOnlyPage(getPageElement(page));
+    return;
+  }
+
+  window.location.assign(route);
+}
+
+function applyCurrentPageView() {
+  showOnlyPage(getPageElement(CURRENT_PAGE));
 }
 
 function showOnlyPage(targetPage) {
@@ -1576,17 +1638,25 @@ function buyCurrentCharacter() {
 }
 
 function openRebirthPage() {
-  showOnlyPage(dom.rebirthPage);
+  navigateToPage("rebirth");
+  if (CURRENT_PAGE !== "rebirth") {
+    return;
+  }
+
   renderRebirthPage();
   setRebirthStatus("Rebirth resets your money and owned brainrots, but keeps your multiplier forever.");
 }
 
 function closeRebirthPage() {
-  showOnlyPage(dom.mainPage);
+  navigateToPage("home");
 }
 
 function openAdminPage() {
-  showOnlyPage(dom.adminPage);
+  navigateToPage("admin");
+  if (CURRENT_PAGE !== "admin") {
+    return;
+  }
+
   renderAdminBrainrotOptions();
   renderAdminMutationOptions();
   renderAdminEventOptions();
@@ -1600,22 +1670,27 @@ function openAdminPage() {
 }
 
 function closeAdminPage() {
-  showOnlyPage(dom.mainPage);
+  navigateToPage("home");
 }
 
 function openSailingPage() {
-  showOnlyPage(dom.sailingPage);
+  navigateToPage("sailing");
+  if (CURRENT_PAGE !== "sailing") {
+    return;
+  }
+
   renderSailingPage();
   setSailingStatus("Choose an island, boat, and sail amount.");
 }
 
 function closeSailingPage() {
-  showOnlyPage(dom.mainPage);
+  navigateToPage("home");
 }
 
 function submitAdminPassword() {
   if (dom.adminPasswordInput.value === ADMIN_PASSWORD) {
     adminAuthorized = true;
+    saveAdminAuthorization(true);
     renderAdminTools();
     renderAdminBrainrotOptions();
     renderAdminMutationOptions();
@@ -1625,6 +1700,7 @@ function submitAdminPassword() {
   }
 
   adminAuthorized = false;
+  saveAdminAuthorization(false);
   renderAdminTools();
   setAdminStatus("Wrong password.");
 }
@@ -1977,6 +2053,7 @@ syncEventState();
 resolveFinishedSailingJobs();
 ensureCurrentRoll();
 render();
+applyCurrentPageView();
 setStatus("Your idle run started with $10. Roll and build your brainrot factory.");
 setRebirthStatus("Stack rebirths to push every brainrot income higher.");
 
