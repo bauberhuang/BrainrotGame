@@ -27,6 +27,7 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
             "/admin": "/html/admin.html",
             "/rebirth": "/html/rebirth.html",
             "/sailing": "/html/sailing.html",
+            "/accountmanagement": "/html/accountmanagement.html",
         }
 
         if self.path in route_map:

@@ -237,10 +237,14 @@ const MAX_REBIRTHS = 20;
 const AUTO_ROLL_SECONDS = 10;
 const EVENT_INTERVAL_SECONDS = 60 * 60;
 const EVENT_DURATION_MS = 5 * 60 * 1000;
-const SAVE_KEY = "brainrot-idle-save-v2";
+const SAVE_KEY_PREFIX = "brainrot-idle-save-v3";
 const ADMIN_PASSWORD = "Ab141130";
 const ADMIN_AUTH_KEY = "brainrot-admin-auth-until";
 const ADMIN_AUTH_DURATION_MS = 60 * 60 * 1000;
+const ADMIN_ACCOUNT_WHITELIST = ["ADMIN_BAUBER"];
+const INVITE_SYSTEM_KEY = "brainrot-invite-system-v1";
+const ACTIVE_ACCOUNT_KEY = "brainrot-active-account-id";
+const MAX_REMEMBERED_ACCOUNTS = 5;
 
 const MUTATIONS = {
   normal: {
@@ -274,18 +278,22 @@ const PAGE_ROUTES = {
   admin: "/admin",
   rebirth: "/rebirth",
   sailing: "/sailing",
+  accountmanagement: "/accountmanagement",
 };
 
 const dom = {
   moneyDisplay: document.querySelector("#moneyDisplay"),
   totalIncomeDisplay: document.querySelector("#totalIncomeDisplay"),
   mainPage: document.querySelector("#mainPage"),
+  accountManagementPage: document.querySelector("#accountManagementPage"),
   rebirthPage: document.querySelector("#rebirthPage"),
   adminPage: document.querySelector("#adminPage"),
   sailingPage: document.querySelector("#sailingPage"),
   rebirthPageButton: document.querySelector("#rebirthPageButton"),
   adminAuthButton: document.querySelector("#adminAuthButton"),
   sailingPageButton: document.querySelector("#sailingPageButton"),
+  accountManagementPageButton: document.querySelector("#accountManagementPageButton"),
+  accountManagementBackButton: document.querySelector("#accountManagementBackButton"),
   backToGameButton: document.querySelector("#backToGameButton"),
   adminBackButton: document.querySelector("#adminBackButton"),
   sailingBackButton: document.querySelector("#sailingBackButton"),
@@ -354,6 +362,25 @@ const dom = {
   sailingRewardPreview: document.querySelector("#sailingRewardPreview"),
   sailingConfirmButton: document.querySelector("#sailingConfirmButton"),
   sailingStatusText: document.querySelector("#sailingStatusText"),
+  inviteAuthUser: document.querySelector("#inviteAuthUser"),
+  inviteAccountName: document.querySelector("#inviteAccountName"),
+  inviteAccountMeta: document.querySelector("#inviteAccountMeta"),
+  inviteAuthText: document.querySelector("#inviteAuthText"),
+  inviteCodeInput: document.querySelector("#inviteCodeInput"),
+  inviteCodeSubmitButton: document.querySelector("#inviteCodeSubmitButton"),
+  inviteCodesList: document.querySelector("#inviteCodesList"),
+  inviteRenameRow: document.querySelector("#inviteRenameRow"),
+  inviteNameInput: document.querySelector("#inviteNameInput"),
+  inviteEditButton: document.querySelector("#inviteEditButton"),
+  inviteSaveButton: document.querySelector("#inviteSaveButton"),
+  rememberedAccountSelect: document.querySelector("#rememberedAccountSelect"),
+  rememberedAccountSwitchButton: document.querySelector("#rememberedAccountSwitchButton"),
+  loginUserInput: document.querySelector("#loginUserInput"),
+  loginPasswordInput: document.querySelector("#loginPasswordInput"),
+  loginPasswordButton: document.querySelector("#loginPasswordButton"),
+  changePasswordInput: document.querySelector("#changePasswordInput"),
+  changePasswordButton: document.querySelector("#changePasswordButton"),
+  inviteSignOutButton: document.querySelector("#inviteSignOutButton"),
 };
 
 const characterById = Object.fromEntries(characters.map((entry) => [entry.id, entry]));
@@ -383,7 +410,9 @@ const defaultLuckyBlockIds = luckyBlockCharacters
   .filter((entry) => !entry.luckyBlockOnly)
   .map((entry) => entry.id);
 
-const state = loadState();
+let inviteSystem;
+let activeAccountId;
+let state;
 let autoRollRemaining = AUTO_ROLL_SECONDS;
 let adminAuthorized = loadAdminAuthorization();
 let selectedOwnedCharacterId = null;
@@ -456,11 +485,239 @@ function normalizeSailingState(sailing = {}) {
   };
 }
 
+function createInviteCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const pick = () =>
+    Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+
+  let nextCode = "";
+  do {
+    nextCode = `${pick()}-${pick()}-${pick()}-${pick()}-${pick()}`;
+  } while (isInviteCodeKnown(nextCode));
+
+  return nextCode;
+}
+
+function isInviteCodeKnown(code) {
+  if (!inviteSystem) {
+    return false;
+  }
+
+  if (inviteSystem.usedCodes[code]) {
+    return true;
+  }
+
+  return Object.values(inviteSystem.accounts).some((account) => account.inviteCodes.includes(code));
+}
+
+function createAccountRecord(index) {
+  return {
+    id: `account-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    name: `Account ${index}`,
+    password: "",
+    inviteCodes: [],
+    createdAt: Date.now(),
+  };
+}
+
+function ensureAccountHasFourCodes(account) {
+  if (!account) {
+    return;
+  }
+
+  while (account.inviteCodes.length < 4) {
+    account.inviteCodes.push(createInviteCode());
+  }
+}
+
+function createInitialInviteSystem() {
+  const starterAccount = createAccountRecord(1);
+  starterAccount.name = "Starter Pool";
+  starterAccount.password = "AAAAA";
+  starterAccount.inviteCodes = ["AAAAA"];
+  const system = {
+    accounts: {
+      [starterAccount.id]: starterAccount,
+    },
+    usedCodes: {},
+    rememberedAccountIds: [starterAccount.id],
+  };
+
+  inviteSystem = system;
+  ensureAccountHasFourCodes(starterAccount);
+  return system;
+}
+
+function normalizeInviteSystem(parsed) {
+  const accounts = {};
+  const rawAccounts = parsed?.accounts || {};
+
+  Object.entries(rawAccounts).forEach(([id, account], index) => {
+    const normalized = {
+      id,
+      name: account?.name || `Account ${index + 1}`,
+      password:
+        typeof account?.password === "string"
+          ? account.password
+          : index === 0
+            ? "AAAAA"
+            : Array.isArray(account?.inviteCodes) && account.inviteCodes[0]
+              ? account.inviteCodes[0]
+              : "",
+      inviteCodes: Array.isArray(account?.inviteCodes)
+        ? account.inviteCodes.filter((code) => typeof code === "string" && code.length > 0)
+        : [],
+      createdAt: Number(account?.createdAt) || Date.now(),
+    };
+    accounts[id] = normalized;
+  });
+
+  if (Object.keys(accounts).length === 0) {
+    return createInitialInviteSystem();
+  }
+
+  const system = {
+    accounts,
+    usedCodes: parsed?.usedCodes && typeof parsed.usedCodes === "object" ? parsed.usedCodes : {},
+    rememberedAccountIds: Array.isArray(parsed?.rememberedAccountIds)
+      ? parsed.rememberedAccountIds.filter((id) => typeof id === "string" && accounts[id]).slice(0, MAX_REMEMBERED_ACCOUNTS)
+      : [],
+  };
+
+  inviteSystem = system;
+  Object.values(system.accounts).forEach(ensureAccountHasFourCodes);
+  return system;
+}
+
+function loadInviteSystem() {
+  try {
+    const raw = localStorage.getItem(INVITE_SYSTEM_KEY);
+    if (!raw) {
+      const created = createInitialInviteSystem();
+      saveInviteSystem();
+      return created;
+    }
+
+    const parsed = JSON.parse(raw);
+    const normalized = normalizeInviteSystem(parsed);
+    saveInviteSystem();
+    return normalized;
+  } catch {
+    const created = createInitialInviteSystem();
+    saveInviteSystem();
+    return created;
+  }
+}
+
+function saveInviteSystem() {
+  try {
+    localStorage.setItem(INVITE_SYSTEM_KEY, JSON.stringify(inviteSystem));
+  } catch {
+    return;
+  }
+}
+
+function loadActiveAccountId() {
+  try {
+    const savedId = localStorage.getItem(ACTIVE_ACCOUNT_KEY);
+    if (savedId && inviteSystem.accounts[savedId]) {
+      return savedId;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function saveActiveAccountId(accountId) {
+  try {
+    if (accountId) {
+      localStorage.setItem(ACTIVE_ACCOUNT_KEY, accountId);
+    } else {
+      localStorage.removeItem(ACTIVE_ACCOUNT_KEY);
+    }
+  } catch {
+    return;
+  }
+}
+
+function getActiveAccount() {
+  return inviteSystem.accounts[activeAccountId] || null;
+}
+
+function canCurrentAccountUseAdmin() {
+  const account = getActiveAccount();
+  return Boolean(account && ADMIN_ACCOUNT_WHITELIST.includes(account.name));
+}
+
+function canCurrentAccountBypassAdminPassword() {
+  const account = getActiveAccount();
+  return Boolean(account && account.name === "ADMIN_BAUBER");
+}
+
+function rememberAccount(accountId) {
+  if (!accountId || !inviteSystem.accounts[accountId]) {
+    return;
+  }
+
+  inviteSystem.rememberedAccountIds = [
+    accountId,
+    ...(inviteSystem.rememberedAccountIds || []).filter((id) => id !== accountId),
+  ].slice(0, MAX_REMEMBERED_ACCOUNTS);
+  saveInviteSystem();
+}
+
+function getRememberedAccounts() {
+  return (inviteSystem.rememberedAccountIds || [])
+    .map((id) => inviteSystem.accounts[id])
+    .filter(Boolean);
+}
+
+function findRememberedAccountByName(name) {
+  const normalizedName = String(name || "").trim().toLowerCase();
+  if (!normalizedName) {
+    return null;
+  }
+
+  return getRememberedAccounts().find(
+    (account) => account.name.trim().toLowerCase() === normalizedName,
+  ) || null;
+}
+
+function isAccountNameTaken(name, excludeAccountId = "") {
+  const normalizedName = String(name || "").trim().toLowerCase();
+  if (!normalizedName) {
+    return false;
+  }
+
+  return Object.values(inviteSystem.accounts).some(
+    (account) =>
+      account.id !== excludeAccountId && account.name.trim().toLowerCase() === normalizedName,
+  );
+}
+
+function getStarterAccount() {
+  return Object.values(inviteSystem.accounts)[0] || null;
+}
+
+function getStarterInviteCode() {
+  const starterAccount = getStarterAccount();
+  return starterAccount?.inviteCodes?.[0] || "";
+}
+
+function getSaveKey() {
+  return `${SAVE_KEY_PREFIX}-${activeAccountId || "local"}`;
+}
+
 function loadState() {
   const fallback = createDefaultState();
+  if (!activeAccountId) {
+    return fallback;
+  }
 
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(getSaveKey());
     if (!raw) {
       return fallback;
     }
@@ -490,8 +747,12 @@ function loadState() {
 }
 
 function saveState() {
+  if (!activeAccountId) {
+    return;
+  }
+
   localStorage.setItem(
-    SAVE_KEY,
+    getSaveKey(),
     JSON.stringify({
       ...state,
       lastTick: Date.now(),
@@ -500,6 +761,10 @@ function saveState() {
 }
 
 function loadAdminAuthorization() {
+  if (canCurrentAccountBypassAdminPassword()) {
+    return true;
+  }
+
   try {
     const expiresAt = Number(localStorage.getItem(ADMIN_AUTH_KEY)) || 0;
     return expiresAt > Date.now();
@@ -509,6 +774,10 @@ function loadAdminAuthorization() {
 }
 
 function saveAdminAuthorization(enabled) {
+  if (canCurrentAccountBypassAdminPassword()) {
+    return;
+  }
+
   try {
     if (enabled) {
       localStorage.setItem(ADMIN_AUTH_KEY, `${Date.now() + ADMIN_AUTH_DURATION_MS}`);
@@ -517,6 +786,274 @@ function saveAdminAuthorization(enabled) {
     }
   } catch {
     return;
+  }
+}
+
+function normalizeInviteCode(code) {
+  return String(code || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .match(/.{1,4}/g)
+    ?.slice(0, 5)
+    .join("-") || "";
+}
+
+function findAccountByInviteCode(code) {
+  return Object.values(inviteSystem.accounts).find((account) => account.inviteCodes.includes(code)) || null;
+}
+
+function createInvitedAccount(ownerAccount, usedCode) {
+  const nextIndex = Object.keys(inviteSystem.accounts).length + 1;
+  const newAccount = createAccountRecord(nextIndex);
+  newAccount.password = usedCode;
+  while (isAccountNameTaken(newAccount.name)) {
+    newAccount.name = `${newAccount.name}X`;
+  }
+  ensureAccountHasFourCodes(newAccount);
+  inviteSystem.accounts[newAccount.id] = newAccount;
+  inviteSystem.usedCodes[usedCode] = newAccount.id;
+
+  if (ownerAccount) {
+    ownerAccount.inviteCodes = ownerAccount.inviteCodes.filter((code) => code !== usedCode);
+    ensureAccountHasFourCodes(ownerAccount);
+  }
+
+  saveInviteSystem();
+  return newAccount;
+}
+
+function switchToAccount(accountId) {
+  if (!inviteSystem.accounts[accountId]) {
+    return;
+  }
+
+  activeAccountId = accountId;
+  saveActiveAccountId(accountId);
+  rememberAccount(accountId);
+  state = loadState();
+  autoRollRemaining = AUTO_ROLL_SECONDS;
+  selectedOwnedCharacterId = null;
+  adminAuthorized = loadAdminAuthorization();
+  ensureCurrentRoll();
+  render();
+}
+
+function openInviteRename() {
+  const account = getActiveAccount();
+  if (!account || !dom.inviteRenameRow || !dom.inviteNameInput) {
+    return;
+  }
+
+  dom.inviteRenameRow.classList.remove("hidden");
+  dom.inviteSaveButton?.classList.remove("hidden");
+  dom.inviteNameInput.value = account.name;
+  dom.inviteNameInput.focus();
+  dom.inviteNameInput.select();
+}
+
+function saveInviteName() {
+  const account = getActiveAccount();
+  if (!account || !dom.inviteNameInput) {
+    return;
+  }
+
+  const nextName = dom.inviteNameInput.value.trim().slice(0, 24);
+  if (!nextName) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "Enter a user name first.";
+    }
+    return;
+  }
+
+  if (isAccountNameTaken(nextName, account.id)) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "That user name is already used by another account.";
+    }
+    return;
+  }
+
+  account.name = nextName;
+  saveInviteSystem();
+  if (dom.inviteRenameRow) {
+    dom.inviteRenameRow.classList.add("hidden");
+  }
+  dom.inviteSaveButton?.classList.add("hidden");
+  renderInviteAuth();
+  setStatus(`User renamed to ${nextName}.`);
+}
+
+function switchToRememberedAccount() {
+  if (!dom.rememberedAccountSelect) {
+    return;
+  }
+
+  const rememberedId = dom.rememberedAccountSelect.value;
+  if (!rememberedId || !inviteSystem.accounts[rememberedId]) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "Pick a remembered account first.";
+    }
+    return;
+  }
+
+  switchToAccount(rememberedId);
+  setStatus(`Switched to ${inviteSystem.accounts[rememberedId].name}.`);
+}
+
+function loginRememberedAccount() {
+  if (!dom.loginUserInput || !dom.loginPasswordInput) {
+    return;
+  }
+
+  const userName = dom.loginUserInput.value.trim();
+  const password = dom.loginPasswordInput.value.trim();
+  const account = findRememberedAccountByName(userName);
+
+  if (!account) {
+    dom.inviteAuthText.textContent = "User not found in remembered accounts.";
+    return;
+  }
+
+  const accountId = account.id;
+  if (!password) {
+    dom.inviteAuthText.textContent = "Enter the account password first.";
+    return;
+  }
+
+  if (account.password !== password) {
+    dom.inviteAuthText.textContent = "Wrong password for that account.";
+    return;
+  }
+
+  dom.loginUserInput.value = "";
+  dom.loginPasswordInput.value = "";
+  switchToAccount(accountId);
+  setStatus(`Logged into ${account.name}.`);
+}
+
+function changeAccountPassword() {
+  const account = getActiveAccount();
+  if (!account || !dom.changePasswordInput) {
+    return;
+  }
+
+  const nextPassword = dom.changePasswordInput.value.trim().slice(0, 24);
+  if (!nextPassword) {
+    dom.inviteAuthText.textContent = "Enter a new password first.";
+    return;
+  }
+
+  account.password = nextPassword;
+  dom.changePasswordInput.value = "";
+  saveInviteSystem();
+  renderInviteAuth();
+  setStatus(`Password changed for ${account.name}.`);
+}
+
+function useInviteCode() {
+  if (!dom.inviteCodeInput) {
+    return;
+  }
+
+  const normalizedCode = normalizeInviteCode(dom.inviteCodeInput.value);
+  if (!normalizedCode) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "Enter a real invite code first.";
+    }
+    return;
+  }
+
+  if (inviteSystem.usedCodes[normalizedCode]) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "That invite code was already used.";
+    }
+    return;
+  }
+
+  const ownerAccount = findAccountByInviteCode(normalizedCode);
+  if (!ownerAccount) {
+    if (dom.inviteAuthText) {
+      dom.inviteAuthText.textContent = "That code does not exist in this game yet.";
+    }
+    return;
+  }
+
+  const newAccount = createInvitedAccount(ownerAccount, normalizedCode);
+  dom.inviteCodeInput.value = "";
+  switchToAccount(newAccount.id);
+  setStatus(`${newAccount.name} joined with invite code ${normalizedCode}.`);
+}
+
+function signOutInviteAccount() {
+  activeAccountId = "";
+  saveActiveAccountId("");
+  state = createDefaultState();
+  autoRollRemaining = AUTO_ROLL_SECONDS;
+  selectedOwnedCharacterId = null;
+  adminAuthorized = false;
+  saveAdminAuthorization(false);
+  ensureCurrentRoll();
+  render();
+  renderInviteAuth();
+}
+
+function renderInviteAuth() {
+  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
+    return;
+  }
+
+  const account = getActiveAccount();
+  const rememberedAccounts = getRememberedAccounts();
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
+      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
+      .join("");
+    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
+  }
+  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
+  if (!account) {
+    if (dom.inviteAuthUser) {
+      dom.inviteAuthUser.classList.add("hidden");
+    }
+    if (dom.inviteSignOutButton) {
+      dom.inviteSignOutButton.classList.add("hidden");
+    }
+    dom.inviteCodeInput?.classList.remove("hidden");
+    dom.inviteCodeSubmitButton.classList.remove("hidden");
+    dom.inviteCodesList.innerHTML = "";
+    dom.inviteRenameRow?.classList.add("hidden");
+    dom.inviteEditButton?.classList.add("hidden");
+    dom.inviteSaveButton?.classList.add("hidden");
+    const starterCode = getStarterInviteCode();
+    dom.inviteAuthText.textContent = starterCode
+      ? `Guest mode does not save. Use this starter code to make a save account: ${starterCode}`
+      : "Guest mode does not save. Use an unused invite code to open another account.";
+    dom.inviteCodesList.innerHTML = starterCode
+      ? `<span class="invite-code-chip">${starterCode}</span>`
+      : "";
+    return;
+  }
+
+  if (dom.inviteAuthUser) {
+    dom.inviteAuthUser.classList.remove("hidden");
+  }
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.value = account.id;
+  }
+  dom.inviteAccountName.textContent = account.name;
+  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes • save enabled`;
+  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh.";
+  dom.inviteCodesList.innerHTML = account.inviteCodes
+    .map((code) => `<span class="invite-code-chip">${code}</span>`)
+    .join("");
+  if (dom.inviteSignOutButton) {
+    dom.inviteSignOutButton.classList.remove("hidden");
+  }
+  dom.inviteEditButton?.classList.remove("hidden");
+  dom.inviteCodeInput?.classList.add("hidden");
+  dom.inviteCodeSubmitButton.classList.add("hidden");
+  if (dom.inviteRenameRow?.classList.contains("hidden")) {
+    dom.inviteSaveButton?.classList.add("hidden");
   }
 }
 
@@ -545,6 +1082,128 @@ function formatMoney(value) {
   }
 
   return `$${value.toFixed(2)}`;
+}
+
+function renderInviteAuth() {
+  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
+    return;
+  }
+
+  const account = getActiveAccount();
+  const rememberedAccounts = getRememberedAccounts();
+
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
+      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
+      .join("");
+    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
+  }
+  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
+
+  if (!account) {
+    dom.inviteAuthUser?.classList.add("hidden");
+    dom.inviteSignOutButton?.classList.add("hidden");
+    dom.inviteCodeInput?.classList.remove("hidden");
+    dom.inviteCodeSubmitButton.classList.remove("hidden");
+    dom.inviteCodesList.innerHTML = "";
+    dom.inviteRenameRow?.classList.add("hidden");
+    dom.inviteEditButton?.classList.add("hidden");
+    dom.inviteSaveButton?.classList.add("hidden");
+
+    const starterCode = getStarterInviteCode();
+    dom.inviteAuthText.textContent = starterCode
+      ? `Guest mode does not save. Use this starter code to make a save account: ${starterCode}`
+      : "Guest mode does not save. Use an unused invite code to open another account.";
+    dom.inviteCodesList.innerHTML = starterCode
+      ? `<span class="invite-code-chip">${starterCode}</span>`
+      : "";
+    return;
+  }
+
+  dom.inviteAuthUser?.classList.remove("hidden");
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.value = account.id;
+  }
+  dom.inviteAccountName.textContent = account.name;
+  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes and save enabled`;
+  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh.";
+  dom.inviteCodesList.innerHTML = account.inviteCodes
+    .map((code) => `<span class="invite-code-chip">${code}</span>`)
+    .join("");
+  dom.inviteSignOutButton?.classList.remove("hidden");
+  dom.inviteEditButton?.classList.remove("hidden");
+  dom.inviteCodeInput?.classList.add("hidden");
+  dom.inviteCodeSubmitButton.classList.add("hidden");
+  if (dom.inviteRenameRow?.classList.contains("hidden")) {
+    dom.inviteSaveButton?.classList.add("hidden");
+  }
+}
+
+function renderInviteAuth() {
+  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
+    return;
+  }
+
+  const account = getActiveAccount();
+  const rememberedAccounts = getRememberedAccounts();
+
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
+      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
+      .join("");
+    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
+  }
+  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
+
+  if (!account) {
+    dom.inviteAuthUser?.classList.add("hidden");
+    dom.inviteSignOutButton?.classList.add("hidden");
+    dom.inviteEditButton?.classList.add("hidden");
+    dom.inviteSaveButton?.classList.add("hidden");
+    dom.inviteRenameRow?.classList.add("hidden");
+    dom.changePasswordInput?.classList.add("hidden");
+    dom.changePasswordButton?.classList.add("hidden");
+    dom.rememberedAccountSelect?.classList.add("hidden");
+    dom.rememberedAccountSwitchButton?.classList.add("hidden");
+    dom.loginUserInput?.classList.toggle("hidden", rememberedAccounts.length === 0);
+    dom.loginPasswordInput?.classList.toggle("hidden", rememberedAccounts.length === 0);
+    dom.loginPasswordButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
+    dom.inviteCodeInput?.classList.remove("hidden");
+    dom.inviteCodeSubmitButton.classList.remove("hidden");
+
+    const starterCode = getStarterInviteCode();
+    dom.inviteAuthText.textContent = starterCode
+      ? `Guest mode does not save. Log in with a password, or use starter invite code ${starterCode} to create a new save account.`
+      : "Guest mode does not save. Log in with a password or use an unused invite code to open another account.";
+    dom.inviteCodesList.innerHTML = starterCode
+      ? `<span class="invite-code-chip">${starterCode}</span>`
+      : "";
+    return;
+  }
+
+  dom.inviteAuthUser?.classList.remove("hidden");
+  dom.inviteSignOutButton?.classList.remove("hidden");
+  dom.inviteEditButton?.classList.remove("hidden");
+  dom.changePasswordInput?.classList.remove("hidden");
+  dom.changePasswordButton?.classList.remove("hidden");
+  dom.inviteCodeInput?.classList.add("hidden");
+  dom.inviteCodeSubmitButton.classList.add("hidden");
+  dom.loginUserInput?.classList.add("hidden");
+  dom.loginPasswordInput?.classList.add("hidden");
+  dom.loginPasswordButton?.classList.add("hidden");
+
+  if (dom.rememberedAccountSelect) {
+    dom.rememberedAccountSelect.value = account.id;
+  }
+  dom.inviteAccountName.textContent = account.name;
+  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes and save enabled`;
+  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh. You can also change its password here.";
+  dom.inviteCodesList.innerHTML = account.inviteCodes
+    .map((code) => `<span class="invite-code-chip">${code}</span>`)
+    .join("");
+  if (dom.inviteRenameRow?.classList.contains("hidden")) {
+    dom.inviteSaveButton?.classList.add("hidden");
+  }
 }
 
 function formatMultiplier(value) {
@@ -1093,9 +1752,28 @@ function renderAdminEventOptions() {
 }
 
 function renderAdminTools() {
+  if (!canCurrentAccountUseAdmin()) {
+    adminAuthorized = false;
+    saveAdminAuthorization(false);
+    renderAdminView();
+    if (dom.adminAuthButton) {
+      dom.adminAuthButton.classList.add("hidden");
+    }
+    if (dom.adminStatusText) {
+      setAdminStatus("Only whitelisted users can use admin tools.");
+    }
+    return;
+  }
+
   adminAuthorized = loadAdminAuthorization();
+  if (dom.adminAuthButton) {
+    dom.adminAuthButton.classList.remove("hidden");
+  }
   renderAdminView();
   if (!adminAuthorized) {
+    if (dom.adminStatusText) {
+      setAdminStatus("This whitelist user still needs admin auth.");
+    }
     return;
   }
 
@@ -1135,6 +1813,10 @@ function renderSailingBoatOptions() {
 }
 
 function getPageElement(page) {
+  if (page === "accountmanagement") {
+    return dom.accountManagementPage;
+  }
+
   if (page === "admin") {
     return dom.adminPage;
   }
@@ -1165,14 +1847,19 @@ function applyCurrentPageView() {
 }
 
 function showOnlyPage(targetPage) {
-  dom.mainPage.classList.add("hidden");
-  dom.rebirthPage.classList.add("hidden");
-  dom.adminPage.classList.add("hidden");
-  dom.sailingPage.classList.add("hidden");
-  targetPage.classList.remove("hidden");
+  [dom.mainPage, dom.accountManagementPage, dom.rebirthPage, dom.adminPage, dom.sailingPage].forEach((page) => {
+    page?.classList.add("hidden");
+  });
+  targetPage?.classList.remove("hidden");
 }
 
 function renderAdminView() {
+  if (!canCurrentAccountUseAdmin()) {
+    dom.adminAuthView.classList.remove("hidden");
+    dom.adminSpawnerView.classList.add("hidden");
+    return;
+  }
+
   dom.adminAuthView.classList.toggle("hidden", adminAuthorized);
   dom.adminSpawnerView.classList.toggle("hidden", !adminAuthorized);
 }
@@ -1538,6 +2225,7 @@ function render() {
   renderOwnedViewer();
   renderRebirthPage();
   renderAdminTools();
+  renderInviteAuth();
   saveState();
 }
 
@@ -1652,6 +2340,15 @@ function closeRebirthPage() {
 }
 
 function openAdminPage() {
+  if (!canCurrentAccountUseAdmin()) {
+    if (CURRENT_PAGE === "admin") {
+      renderAdminTools();
+    } else {
+      setStatus("Only whitelisted users can access admin tools.");
+    }
+    return;
+  }
+
   navigateToPage("admin");
   if (CURRENT_PAGE !== "admin") {
     return;
@@ -1663,7 +2360,11 @@ function openAdminPage() {
   renderAdminTools();
   if (!adminAuthorized) {
     dom.adminPasswordInput.value = "";
-    setAdminStatus("Admin auth is locked.");
+    setAdminStatus(
+      canCurrentAccountBypassAdminPassword()
+        ? "Admin unlocked for ADMIN_BAUBER."
+        : "Admin auth is locked.",
+    );
   } else {
     setAdminSpawnerStatus("Spawn brainrots directly into your collection.");
   }
@@ -1687,7 +2388,35 @@ function closeSailingPage() {
   navigateToPage("home");
 }
 
+function openAccountManagementPage() {
+  navigateToPage("accountmanagement");
+  if (CURRENT_PAGE !== "accountmanagement") {
+    return;
+  }
+
+  renderInviteAuth();
+}
+
+function closeAccountManagementPage() {
+  navigateToPage("home");
+}
+
 function submitAdminPassword() {
+  if (!canCurrentAccountUseAdmin()) {
+    adminAuthorized = false;
+    saveAdminAuthorization(false);
+    renderAdminTools();
+    setAdminStatus("Only whitelisted users can use admin tools.");
+    return;
+  }
+
+  if (canCurrentAccountBypassAdminPassword()) {
+    adminAuthorized = true;
+    renderAdminTools();
+    setAdminSpawnerStatus("Admin unlocked for ADMIN_BAUBER.");
+    return;
+  }
+
   if (dom.adminPasswordInput.value === ADMIN_PASSWORD) {
     adminAuthorized = true;
     saveAdminAuthorization(true);
@@ -2020,6 +2749,8 @@ bindClick(dom.uncoverAllLuckyBlocksButton, uncoverAllLuckyBlocks);
 bindClick(dom.rebirthPageButton, openRebirthPage);
 bindClick(dom.adminAuthButton, openAdminPage);
 bindClick(dom.sailingPageButton, openSailingPage);
+bindClick(dom.accountManagementPageButton, openAccountManagementPage);
+bindClick(dom.accountManagementBackButton, closeAccountManagementPage);
 bindClick(dom.backToGameButton, closeRebirthPage);
 bindClick(dom.adminBackButton, closeAdminPage);
 bindClick(dom.sailingBackButton, closeSailingPage);
@@ -2031,6 +2762,13 @@ bindClick(dom.adminSetRebirthButton, adminSetRebirth);
 bindClick(dom.adminSetEventButton, adminSetEvent);
 bindClick(dom.adminClearEventButton, adminClearEvent);
 bindClick(dom.sailingConfirmButton, startSailing);
+bindClick(dom.inviteCodeSubmitButton, useInviteCode);
+bindClick(dom.inviteEditButton, openInviteRename);
+bindClick(dom.inviteSaveButton, saveInviteName);
+bindClick(dom.rememberedAccountSwitchButton, switchToRememberedAccount);
+bindClick(dom.loginPasswordButton, loginRememberedAccount);
+bindClick(dom.changePasswordButton, changeAccountPassword);
+bindClick(dom.inviteSignOutButton, signOutInviteAccount);
 if (dom.adminPasswordInput) {
   dom.adminPasswordInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -2047,13 +2785,54 @@ if (dom.sailingBoatSelect) {
 if (dom.sailingAmountInput) {
   dom.sailingAmountInput.addEventListener("input", handleSailingAmountInput);
 }
+if (dom.inviteCodeInput) {
+  dom.inviteCodeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      useInviteCode();
+    }
+  });
+}
+if (dom.inviteNameInput) {
+  dom.inviteNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      saveInviteName();
+    }
+  });
+}
+if (dom.loginPasswordInput) {
+  dom.loginPasswordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      loginRememberedAccount();
+    }
+  });
+}
+if (dom.loginUserInput) {
+  dom.loginUserInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      loginRememberedAccount();
+    }
+  });
+}
+if (dom.changePasswordInput) {
+  dom.changePasswordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      changeAccountPassword();
+    }
+  });
+}
 
+inviteSystem = loadInviteSystem();
+activeAccountId = loadActiveAccountId();
+state = loadState();
 awardOfflineIncome();
 syncEventState();
 resolveFinishedSailingJobs();
 ensureCurrentRoll();
 render();
 applyCurrentPageView();
+if (typeof window.PAGE_BOOT === "function") {
+  window.PAGE_BOOT();
+}
 setStatus("Your idle run started with $10. Roll and build your brainrot factory.");
 setRebirthStatus("Stack rebirths to push every brainrot income higher.");
 

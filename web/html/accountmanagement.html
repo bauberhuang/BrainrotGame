@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brainrot Roller - Admin Auth</title>
+    <title>Brainrot Roller - Account Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -47,7 +47,7 @@
         </div>
       </header>
 
-      <section class="main-grid" id="mainPage">
+      <section class="main-grid hidden" id="mainPage">
         <section class="roller-panel">
           <div class="panel-title-row">
             <h2>Character</h2>
@@ -95,9 +95,7 @@
             <button class="game-button roll" id="rollButton" type="button">Roll</button>
           </div>
 
-          <p class="status-text" id="statusText">
-            Roll to find your first brainrot.
-          </p>
+          <p class="status-text" id="statusText">Roll to find your first brainrot.</p>
         </section>
 
         <aside class="collection-panel">
@@ -145,6 +143,52 @@
         </aside>
       </section>
 
+      <section class="rebirth-page" id="accountManagementPage">
+        <article class="rebirth-panel">
+          <div class="panel-title-row">
+            <div>
+              <p class="eyebrow">Player Identity</p>
+              <h2>Account Management</h2>
+            </div>
+            <button class="back-button" id="accountManagementBackButton" type="button">Back</button>
+          </div>
+
+          <div class="invite-auth-box account-management-box">
+            <div class="invite-auth-user" id="inviteAuthUser">
+              <div>
+                <strong id="inviteAccountName">Account 1</strong>
+                <p class="invite-auth-meta" id="inviteAccountMeta">4 active invite codes</p>
+              </div>
+            </div>
+            <p class="invite-auth-copy" id="inviteAuthText">Your first account starts with 4 invite codes.</p>
+            <div class="invite-rename-row hidden" id="inviteRenameRow">
+              <input class="admin-input" id="inviteNameInput" type="text" maxlength="24" placeholder="Edit user name" />
+            </div>
+            <div class="invite-action-row">
+              <button class="mini-action hidden" id="inviteEditButton" type="button">Edit User</button>
+              <button class="mini-action hidden" id="inviteSaveButton" type="button">Save User</button>
+            </div>
+            <div class="invite-action-row">
+              <select class="admin-select hidden" id="rememberedAccountSelect"></select>
+              <button class="mini-action hidden" id="rememberedAccountSwitchButton" type="button">Switch Back</button>
+            </div>
+            <div class="invite-action-row">
+              <input class="admin-input hidden" id="loginUserInput" type="text" maxlength="24" placeholder="User name" />
+              <input class="admin-input hidden" id="loginPasswordInput" type="password" maxlength="24" placeholder="Account password" />
+              <button class="mini-action hidden" id="loginPasswordButton" type="button">Log In</button>
+            </div>
+            <input class="admin-input hidden" id="inviteCodeInput" type="text" maxlength="24" placeholder="AAAA-BBBB-CCCC-DDDD-0000" />
+            <button class="mini-action hidden" id="inviteCodeSubmitButton" type="button">Use Code</button>
+            <div class="invite-action-row">
+              <input class="admin-input hidden" id="changePasswordInput" type="password" maxlength="24" placeholder="New password" />
+              <button class="mini-action hidden" id="changePasswordButton" type="button">Change Password</button>
+            </div>
+            <div class="invite-codes-list" id="inviteCodesList"></div>
+            <button class="mini-action hidden" id="inviteSignOutButton" type="button">Switch Account</button>
+          </div>
+        </article>
+      </section>
+
       <section class="rebirth-page hidden" id="rebirthPage">
         <article class="rebirth-panel">
           <div class="panel-title-row">
@@ -181,12 +225,8 @@
             Your 1st rebirth will boost all brainrots to 1.5x cash.
           </p>
 
-          <button class="game-button rebirth-action" id="miniRebirthButton" type="button">
-            Rebirth
-          </button>
-          <p class="status-text" id="rebirthStatusText">
-            Stack rebirths to push every brainrot income higher.
-          </p>
+          <button class="game-button rebirth-action" id="miniRebirthButton" type="button">Rebirth</button>
+          <p class="status-text" id="rebirthStatusText">Stack rebirths to push every brainrot income higher.</p>
         </article>
       </section>
 
@@ -325,7 +365,7 @@
       </section>
     </main>
 
-    <script src="../js/admin.js"></script>
+    <script src="../js/accountmanagement.js"></script>
     <script src="../js/core.js"></script>
   </body>
 </html>

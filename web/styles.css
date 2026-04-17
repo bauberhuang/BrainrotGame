@@ -180,6 +180,7 @@ body::after {
   font-size: clamp(1.7rem, 3vw, 2.9rem);
   line-height: 1.08;
   max-width: 12ch;
+  display: none;
 }
 
 .totals {
@@ -239,6 +240,65 @@ body::after {
   min-height: 84px;
   background: linear-gradient(135deg, #4bb4c6, #1f7cc6);
   color: white;
+}
+
+.account-launch {
+  min-height: 84px;
+  background: linear-gradient(135deg, #6e7efc, #4659d4);
+  color: white;
+}
+
+.auth-card {
+  min-width: 280px;
+}
+
+.invite-auth-box {
+  margin-top: 8px;
+  display: grid;
+  gap: 10px;
+}
+
+.invite-auth-user,
+.invite-auth-copy,
+.invite-auth-meta {
+  margin: 0;
+  font-size: 0.84rem;
+  color: rgba(38, 20, 10, 0.7);
+}
+
+.invite-codes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.invite-rename-row {
+  display: grid;
+}
+
+.invite-action-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.invite-action-row .admin-select {
+  min-width: 180px;
+  flex: 1;
+}
+
+.invite-code-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(40, 112, 255, 0.12);
+  border: 1px solid rgba(40, 112, 255, 0.14);
+  color: #1b4fc7;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .main-grid {
