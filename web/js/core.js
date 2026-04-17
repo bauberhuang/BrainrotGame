@@ -414,8 +414,18 @@ let inviteSystem;
 let activeAccountId;
 let state;
 let autoRollRemaining = AUTO_ROLL_SECONDS;
-let adminAuthorized = loadAdminAuthorization();
+let adminAuthorized = false;
 let selectedOwnedCharacterId = null;
+const modules = window.BrainrotModules || {};
+
+function callModuleMethod(moduleName, methodName, ...args) {
+  const method = modules[moduleName]?.[methodName];
+  if (typeof method === "function") {
+    return method(...args);
+  }
+
+  return undefined;
+}
 
 function createDefaultState() {
   return {
@@ -643,6 +653,10 @@ function saveActiveAccountId(accountId) {
 }
 
 function getActiveAccount() {
+  if (!inviteSystem?.accounts || !activeAccountId) {
+    return null;
+  }
+
   return inviteSystem.accounts[activeAccountId] || null;
 }
 
@@ -657,7 +671,7 @@ function canCurrentAccountBypassAdminPassword() {
 }
 
 function rememberAccount(accountId) {
-  if (!accountId || !inviteSystem.accounts[accountId]) {
+  if (!accountId || !inviteSystem?.accounts?.[accountId]) {
     return;
   }
 
@@ -669,6 +683,10 @@ function rememberAccount(accountId) {
 }
 
 function getRememberedAccounts() {
+  if (!inviteSystem?.accounts) {
+    return [];
+  }
+
   return (inviteSystem.rememberedAccountIds || [])
     .map((id) => inviteSystem.accounts[id])
     .filter(Boolean);
@@ -687,7 +705,7 @@ function findRememberedAccountByName(name) {
 
 function isAccountNameTaken(name, excludeAccountId = "") {
   const normalizedName = String(name || "").trim().toLowerCase();
-  if (!normalizedName) {
+  if (!normalizedName || !inviteSystem?.accounts) {
     return false;
   }
 
@@ -698,6 +716,10 @@ function isAccountNameTaken(name, excludeAccountId = "") {
 }
 
 function getStarterAccount() {
+  if (!inviteSystem?.accounts) {
+    return null;
+  }
+
   return Object.values(inviteSystem.accounts)[0] || null;
 }
 
@@ -789,274 +811,6 @@ function saveAdminAuthorization(enabled) {
   }
 }
 
-function normalizeInviteCode(code) {
-  return String(code || "")
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .match(/.{1,4}/g)
-    ?.slice(0, 5)
-    .join("-") || "";
-}
-
-function findAccountByInviteCode(code) {
-  return Object.values(inviteSystem.accounts).find((account) => account.inviteCodes.includes(code)) || null;
-}
-
-function createInvitedAccount(ownerAccount, usedCode) {
-  const nextIndex = Object.keys(inviteSystem.accounts).length + 1;
-  const newAccount = createAccountRecord(nextIndex);
-  newAccount.password = usedCode;
-  while (isAccountNameTaken(newAccount.name)) {
-    newAccount.name = `${newAccount.name}X`;
-  }
-  ensureAccountHasFourCodes(newAccount);
-  inviteSystem.accounts[newAccount.id] = newAccount;
-  inviteSystem.usedCodes[usedCode] = newAccount.id;
-
-  if (ownerAccount) {
-    ownerAccount.inviteCodes = ownerAccount.inviteCodes.filter((code) => code !== usedCode);
-    ensureAccountHasFourCodes(ownerAccount);
-  }
-
-  saveInviteSystem();
-  return newAccount;
-}
-
-function switchToAccount(accountId) {
-  if (!inviteSystem.accounts[accountId]) {
-    return;
-  }
-
-  activeAccountId = accountId;
-  saveActiveAccountId(accountId);
-  rememberAccount(accountId);
-  state = loadState();
-  autoRollRemaining = AUTO_ROLL_SECONDS;
-  selectedOwnedCharacterId = null;
-  adminAuthorized = loadAdminAuthorization();
-  ensureCurrentRoll();
-  render();
-}
-
-function openInviteRename() {
-  const account = getActiveAccount();
-  if (!account || !dom.inviteRenameRow || !dom.inviteNameInput) {
-    return;
-  }
-
-  dom.inviteRenameRow.classList.remove("hidden");
-  dom.inviteSaveButton?.classList.remove("hidden");
-  dom.inviteNameInput.value = account.name;
-  dom.inviteNameInput.focus();
-  dom.inviteNameInput.select();
-}
-
-function saveInviteName() {
-  const account = getActiveAccount();
-  if (!account || !dom.inviteNameInput) {
-    return;
-  }
-
-  const nextName = dom.inviteNameInput.value.trim().slice(0, 24);
-  if (!nextName) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "Enter a user name first.";
-    }
-    return;
-  }
-
-  if (isAccountNameTaken(nextName, account.id)) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "That user name is already used by another account.";
-    }
-    return;
-  }
-
-  account.name = nextName;
-  saveInviteSystem();
-  if (dom.inviteRenameRow) {
-    dom.inviteRenameRow.classList.add("hidden");
-  }
-  dom.inviteSaveButton?.classList.add("hidden");
-  renderInviteAuth();
-  setStatus(`User renamed to ${nextName}.`);
-}
-
-function switchToRememberedAccount() {
-  if (!dom.rememberedAccountSelect) {
-    return;
-  }
-
-  const rememberedId = dom.rememberedAccountSelect.value;
-  if (!rememberedId || !inviteSystem.accounts[rememberedId]) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "Pick a remembered account first.";
-    }
-    return;
-  }
-
-  switchToAccount(rememberedId);
-  setStatus(`Switched to ${inviteSystem.accounts[rememberedId].name}.`);
-}
-
-function loginRememberedAccount() {
-  if (!dom.loginUserInput || !dom.loginPasswordInput) {
-    return;
-  }
-
-  const userName = dom.loginUserInput.value.trim();
-  const password = dom.loginPasswordInput.value.trim();
-  const account = findRememberedAccountByName(userName);
-
-  if (!account) {
-    dom.inviteAuthText.textContent = "User not found in remembered accounts.";
-    return;
-  }
-
-  const accountId = account.id;
-  if (!password) {
-    dom.inviteAuthText.textContent = "Enter the account password first.";
-    return;
-  }
-
-  if (account.password !== password) {
-    dom.inviteAuthText.textContent = "Wrong password for that account.";
-    return;
-  }
-
-  dom.loginUserInput.value = "";
-  dom.loginPasswordInput.value = "";
-  switchToAccount(accountId);
-  setStatus(`Logged into ${account.name}.`);
-}
-
-function changeAccountPassword() {
-  const account = getActiveAccount();
-  if (!account || !dom.changePasswordInput) {
-    return;
-  }
-
-  const nextPassword = dom.changePasswordInput.value.trim().slice(0, 24);
-  if (!nextPassword) {
-    dom.inviteAuthText.textContent = "Enter a new password first.";
-    return;
-  }
-
-  account.password = nextPassword;
-  dom.changePasswordInput.value = "";
-  saveInviteSystem();
-  renderInviteAuth();
-  setStatus(`Password changed for ${account.name}.`);
-}
-
-function useInviteCode() {
-  if (!dom.inviteCodeInput) {
-    return;
-  }
-
-  const normalizedCode = normalizeInviteCode(dom.inviteCodeInput.value);
-  if (!normalizedCode) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "Enter a real invite code first.";
-    }
-    return;
-  }
-
-  if (inviteSystem.usedCodes[normalizedCode]) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "That invite code was already used.";
-    }
-    return;
-  }
-
-  const ownerAccount = findAccountByInviteCode(normalizedCode);
-  if (!ownerAccount) {
-    if (dom.inviteAuthText) {
-      dom.inviteAuthText.textContent = "That code does not exist in this game yet.";
-    }
-    return;
-  }
-
-  const newAccount = createInvitedAccount(ownerAccount, normalizedCode);
-  dom.inviteCodeInput.value = "";
-  switchToAccount(newAccount.id);
-  setStatus(`${newAccount.name} joined with invite code ${normalizedCode}.`);
-}
-
-function signOutInviteAccount() {
-  activeAccountId = "";
-  saveActiveAccountId("");
-  state = createDefaultState();
-  autoRollRemaining = AUTO_ROLL_SECONDS;
-  selectedOwnedCharacterId = null;
-  adminAuthorized = false;
-  saveAdminAuthorization(false);
-  ensureCurrentRoll();
-  render();
-  renderInviteAuth();
-}
-
-function renderInviteAuth() {
-  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
-    return;
-  }
-
-  const account = getActiveAccount();
-  const rememberedAccounts = getRememberedAccounts();
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
-      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
-      .join("");
-    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
-  }
-  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
-  if (!account) {
-    if (dom.inviteAuthUser) {
-      dom.inviteAuthUser.classList.add("hidden");
-    }
-    if (dom.inviteSignOutButton) {
-      dom.inviteSignOutButton.classList.add("hidden");
-    }
-    dom.inviteCodeInput?.classList.remove("hidden");
-    dom.inviteCodeSubmitButton.classList.remove("hidden");
-    dom.inviteCodesList.innerHTML = "";
-    dom.inviteRenameRow?.classList.add("hidden");
-    dom.inviteEditButton?.classList.add("hidden");
-    dom.inviteSaveButton?.classList.add("hidden");
-    const starterCode = getStarterInviteCode();
-    dom.inviteAuthText.textContent = starterCode
-      ? `Guest mode does not save. Use this starter code to make a save account: ${starterCode}`
-      : "Guest mode does not save. Use an unused invite code to open another account.";
-    dom.inviteCodesList.innerHTML = starterCode
-      ? `<span class="invite-code-chip">${starterCode}</span>`
-      : "";
-    return;
-  }
-
-  if (dom.inviteAuthUser) {
-    dom.inviteAuthUser.classList.remove("hidden");
-  }
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.value = account.id;
-  }
-  dom.inviteAccountName.textContent = account.name;
-  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes • save enabled`;
-  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh.";
-  dom.inviteCodesList.innerHTML = account.inviteCodes
-    .map((code) => `<span class="invite-code-chip">${code}</span>`)
-    .join("");
-  if (dom.inviteSignOutButton) {
-    dom.inviteSignOutButton.classList.remove("hidden");
-  }
-  dom.inviteEditButton?.classList.remove("hidden");
-  dom.inviteCodeInput?.classList.add("hidden");
-  dom.inviteCodeSubmitButton.classList.add("hidden");
-  if (dom.inviteRenameRow?.classList.contains("hidden")) {
-    dom.inviteSaveButton?.classList.add("hidden");
-  }
-}
-
 function formatMoney(value) {
   const tiers = [
     { limit: 1e100, suffix: "GOL", divisor: 1e100, decimals: 3 },
@@ -1083,129 +837,6 @@ function formatMoney(value) {
 
   return `$${value.toFixed(2)}`;
 }
-
-function renderInviteAuth() {
-  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
-    return;
-  }
-
-  const account = getActiveAccount();
-  const rememberedAccounts = getRememberedAccounts();
-
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
-      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
-      .join("");
-    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
-  }
-  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
-
-  if (!account) {
-    dom.inviteAuthUser?.classList.add("hidden");
-    dom.inviteSignOutButton?.classList.add("hidden");
-    dom.inviteCodeInput?.classList.remove("hidden");
-    dom.inviteCodeSubmitButton.classList.remove("hidden");
-    dom.inviteCodesList.innerHTML = "";
-    dom.inviteRenameRow?.classList.add("hidden");
-    dom.inviteEditButton?.classList.add("hidden");
-    dom.inviteSaveButton?.classList.add("hidden");
-
-    const starterCode = getStarterInviteCode();
-    dom.inviteAuthText.textContent = starterCode
-      ? `Guest mode does not save. Use this starter code to make a save account: ${starterCode}`
-      : "Guest mode does not save. Use an unused invite code to open another account.";
-    dom.inviteCodesList.innerHTML = starterCode
-      ? `<span class="invite-code-chip">${starterCode}</span>`
-      : "";
-    return;
-  }
-
-  dom.inviteAuthUser?.classList.remove("hidden");
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.value = account.id;
-  }
-  dom.inviteAccountName.textContent = account.name;
-  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes and save enabled`;
-  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh.";
-  dom.inviteCodesList.innerHTML = account.inviteCodes
-    .map((code) => `<span class="invite-code-chip">${code}</span>`)
-    .join("");
-  dom.inviteSignOutButton?.classList.remove("hidden");
-  dom.inviteEditButton?.classList.remove("hidden");
-  dom.inviteCodeInput?.classList.add("hidden");
-  dom.inviteCodeSubmitButton.classList.add("hidden");
-  if (dom.inviteRenameRow?.classList.contains("hidden")) {
-    dom.inviteSaveButton?.classList.add("hidden");
-  }
-}
-
-function renderInviteAuth() {
-  if (!dom.inviteAuthText || !dom.inviteCodeSubmitButton || !dom.inviteCodesList) {
-    return;
-  }
-
-  const account = getActiveAccount();
-  const rememberedAccounts = getRememberedAccounts();
-
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.innerHTML = rememberedAccounts
-      .map((rememberedAccount) => `<option value="${rememberedAccount.id}">${rememberedAccount.name}</option>`)
-      .join("");
-    dom.rememberedAccountSelect.classList.toggle("hidden", rememberedAccounts.length === 0);
-  }
-  dom.rememberedAccountSwitchButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
-
-  if (!account) {
-    dom.inviteAuthUser?.classList.add("hidden");
-    dom.inviteSignOutButton?.classList.add("hidden");
-    dom.inviteEditButton?.classList.add("hidden");
-    dom.inviteSaveButton?.classList.add("hidden");
-    dom.inviteRenameRow?.classList.add("hidden");
-    dom.changePasswordInput?.classList.add("hidden");
-    dom.changePasswordButton?.classList.add("hidden");
-    dom.rememberedAccountSelect?.classList.add("hidden");
-    dom.rememberedAccountSwitchButton?.classList.add("hidden");
-    dom.loginUserInput?.classList.toggle("hidden", rememberedAccounts.length === 0);
-    dom.loginPasswordInput?.classList.toggle("hidden", rememberedAccounts.length === 0);
-    dom.loginPasswordButton?.classList.toggle("hidden", rememberedAccounts.length === 0);
-    dom.inviteCodeInput?.classList.remove("hidden");
-    dom.inviteCodeSubmitButton.classList.remove("hidden");
-
-    const starterCode = getStarterInviteCode();
-    dom.inviteAuthText.textContent = starterCode
-      ? `Guest mode does not save. Log in with a password, or use starter invite code ${starterCode} to create a new save account.`
-      : "Guest mode does not save. Log in with a password or use an unused invite code to open another account.";
-    dom.inviteCodesList.innerHTML = starterCode
-      ? `<span class="invite-code-chip">${starterCode}</span>`
-      : "";
-    return;
-  }
-
-  dom.inviteAuthUser?.classList.remove("hidden");
-  dom.inviteSignOutButton?.classList.remove("hidden");
-  dom.inviteEditButton?.classList.remove("hidden");
-  dom.changePasswordInput?.classList.remove("hidden");
-  dom.changePasswordButton?.classList.remove("hidden");
-  dom.inviteCodeInput?.classList.add("hidden");
-  dom.inviteCodeSubmitButton.classList.add("hidden");
-  dom.loginUserInput?.classList.add("hidden");
-  dom.loginPasswordInput?.classList.add("hidden");
-  dom.loginPasswordButton?.classList.add("hidden");
-
-  if (dom.rememberedAccountSelect) {
-    dom.rememberedAccountSelect.value = account.id;
-  }
-  dom.inviteAccountName.textContent = account.name;
-  dom.inviteAccountMeta.textContent = `${account.inviteCodes.length} active invite codes and save enabled`;
-  dom.inviteAuthText.textContent = "This account saves your money and brainrots after refresh. You can also change its password here.";
-  dom.inviteCodesList.innerHTML = account.inviteCodes
-    .map((code) => `<span class="invite-code-chip">${code}</span>`)
-    .join("");
-  if (dom.inviteRenameRow?.classList.contains("hidden")) {
-    dom.inviteSaveButton?.classList.add("hidden");
-  }
-}
-
 function formatMultiplier(value) {
   return `${value.toFixed(1)}x`;
 }
@@ -1427,34 +1058,16 @@ function getLuckyBlockInventory() {
   };
 }
 
-function getCurrentSailingIsland() {
-  return sailingIslandById[state.sailing.selectedIslandId] || sailingIslands[0];
+function getCurrentSailingIsland(sailingState = state.sailing) {
+  return sailingIslandById[sailingState.selectedIslandId || sailingState.islandId] || sailingIslands[0];
 }
 
-function getCurrentSailingBoat() {
-  return sailingBoatById[state.sailing.selectedBoatId] || sailingBoats[0];
+function getCurrentSailingBoat(sailingState = state.sailing) {
+  return sailingBoatById[sailingState.selectedBoatId || sailingState.boatId] || sailingBoats[0];
 }
 
-function getSailingCost() {
-  return getCurrentSailingBoat().cost * state.sailing.amount;
-}
-
-function getTotalActiveSails() {
-  return state.sailing.jobs.reduce((total, job) => total + job.amount, 0);
-}
-
-function getNextSailingReturnTime() {
-  if (state.sailing.jobs.length === 0) {
-    return null;
-  }
-
-  return Math.min(...state.sailing.jobs.map((job) => job.endsAt));
-}
-
-function setSailingStatus(message) {
-  if (dom.sailingStatusText) {
-    dom.sailingStatusText.textContent = message;
-  }
+function getSailingCost(sailingState = state.sailing) {
+  return getCurrentSailingBoat(sailingState).cost * sailingState.amount;
 }
 
 function getApproximateSuccessCount(amount, chance) {
@@ -1492,14 +1105,16 @@ function distributeSailingRewards(successCount, rewards) {
   }
 
   let assigned = 0;
-  return rewards.map((reward, index) => {
-    const isLast = index === rewards.length - 1;
-    const count = isLast
-      ? successCount - assigned
-      : Math.max(0, Math.round((successCount * reward.sailingValue) / totalValue));
-    assigned += count;
-    return { reward, count };
-  }).filter((entry) => entry.count > 0);
+  return rewards
+    .map((reward, index) => {
+      const isLast = index === rewards.length - 1;
+      const count = isLast
+        ? successCount - assigned
+        : Math.max(0, Math.round((successCount * reward.sailingValue) / totalValue));
+      assigned += count;
+      return { reward, count };
+    })
+    .filter((entry) => entry.count > 0);
 }
 
 function splitSailingRewardMutations(amount) {
@@ -1555,8 +1170,8 @@ function resolveFinishedSailingJobs() {
   let totalMoneyBonus = 0;
 
   for (const job of completedJobs) {
-    const island = sailingIslandById[job.islandId] || sailingIslands[0];
-    const boat = sailingBoatById[job.boatId] || sailingBoats[0];
+    const island = getCurrentSailingIsland(job);
+    const boat = getCurrentSailingBoat(job);
     const successCount = getApproximateSuccessCount(job.amount, boat.brainrotChance);
     const rewards = distributeSailingRewards(successCount, island.rewards);
 
@@ -1581,7 +1196,9 @@ function resolveFinishedSailingJobs() {
     state.money += totalMoneyBonus;
   }
 
-  setSailingStatus(
+  callModuleMethod(
+    "sailing",
+    "setSailingStatus",
     totalMoneyBonus > 0
       ? `Sails returned with ${totalRewardedBrainrots} brainrots and ${formatMoney(totalMoneyBonus)} bonus cash.`
       : `Sails returned with ${totalRewardedBrainrots} brainrots.`,
@@ -1676,142 +1293,6 @@ function grantOwnedCharacter(characterId, mutation = "normal", amount = 1) {
   entry[countKey] += amount;
 }
 
-function setAdminStatus(message) {
-  dom.adminStatusText.textContent = message;
-}
-
-function setAdminSpawnerStatus(message) {
-  dom.adminSpawnerStatusText.textContent = message;
-}
-
-function getAdminSpawnables() {
-  const combined = [
-    ...characters,
-    ...luckyBlockCharacters,
-    ...sailingRewardCharacters,
-    ...adminOnlyCharacters,
-  ];
-  const uniqueEntries = combined.filter(
-    (entry, index, array) => array.findIndex((item) => item.id === entry.id) === index,
-  );
-
-  return uniqueEntries.sort((left, right) => {
-    if (left.adminOnly && !right.adminOnly) {
-      return -1;
-    }
-
-    if (!left.adminOnly && right.adminOnly) {
-      return 1;
-    }
-
-    return left.name.localeCompare(right.name);
-  });
-}
-
-function renderAdminBrainrotOptions() {
-  if (!dom.adminBrainrotSelect) {
-    return;
-  }
-
-  const previousValue = dom.adminBrainrotSelect.value;
-  const options = getAdminSpawnables()
-    .map((entry) => `<option value="${entry.id}">${entry.name}</option>`)
-    .join("");
-  dom.adminBrainrotSelect.innerHTML = options;
-
-  const hasPreviousValue = getAdminSpawnables().some((entry) => entry.id === previousValue);
-  if (hasPreviousValue) {
-    dom.adminBrainrotSelect.value = previousValue;
-    return;
-  }
-
-  const defaultAdminOnly = adminOnlyCharacters[0]?.id;
-  dom.adminBrainrotSelect.value = defaultAdminOnly || getAdminSpawnables()[0]?.id || "";
-}
-
-function renderAdminMutationOptions() {
-  if (!dom.adminMutationSelect) {
-    return;
-  }
-
-  const options = Object.entries(MUTATIONS)
-    .map(([id, mutation], index) => `<option value="${id}">${index + 1} ${mutation.label}</option>`)
-    .join("");
-  dom.adminMutationSelect.innerHTML = options;
-}
-
-function renderAdminEventOptions() {
-  if (!dom.adminEventSelect) {
-    return;
-  }
-
-  const options = Object.entries(EVENT_MUTATION_WEIGHTS)
-    .map(([id]) => `<option value="${id}">${getMutationDisplayName(id)}</option>`)
-    .join("");
-  dom.adminEventSelect.innerHTML = options;
-}
-
-function renderAdminTools() {
-  if (!canCurrentAccountUseAdmin()) {
-    adminAuthorized = false;
-    saveAdminAuthorization(false);
-    renderAdminView();
-    if (dom.adminAuthButton) {
-      dom.adminAuthButton.classList.add("hidden");
-    }
-    if (dom.adminStatusText) {
-      setAdminStatus("Only whitelisted users can use admin tools.");
-    }
-    return;
-  }
-
-  adminAuthorized = loadAdminAuthorization();
-  if (dom.adminAuthButton) {
-    dom.adminAuthButton.classList.remove("hidden");
-  }
-  renderAdminView();
-  if (!adminAuthorized) {
-    if (dom.adminStatusText) {
-      setAdminStatus("This whitelist user still needs admin auth.");
-    }
-    return;
-  }
-
-  renderAdminBrainrotOptions();
-  renderAdminMutationOptions();
-  renderAdminEventOptions();
-  dom.adminSetMoneyInput.value = `${Math.floor(state.money * 100) / 100}`;
-  dom.adminSetRebirthInput.value = `${state.rebirthCount}`;
-  if (dom.adminMutationSelect) {
-    dom.adminMutationSelect.value = dom.adminMutationSelect.value || "normal";
-  }
-  if (dom.adminEventSelect) {
-    dom.adminEventSelect.value = state.event.activeMutation || "rainbow";
-  }
-}
-
-function renderSailingIslandOptions() {
-  if (!dom.sailingIslandSelect) {
-    return;
-  }
-
-  dom.sailingIslandSelect.innerHTML = sailingIslands
-    .map((island) => `<option value="${island.id}">${island.name}</option>`)
-    .join("");
-  dom.sailingIslandSelect.value = getCurrentSailingIsland().id;
-}
-
-function renderSailingBoatOptions() {
-  if (!dom.sailingBoatSelect) {
-    return;
-  }
-
-  dom.sailingBoatSelect.innerHTML = sailingBoats
-    .map((boat) => `<option value="${boat.id}">${boat.name}</option>`)
-    .join("");
-  dom.sailingBoatSelect.value = getCurrentSailingBoat().id;
-}
-
 function getPageElement(page) {
   if (page === "accountmanagement") {
     return dom.accountManagementPage;
@@ -1851,54 +1332,6 @@ function showOnlyPage(targetPage) {
     page?.classList.add("hidden");
   });
   targetPage?.classList.remove("hidden");
-}
-
-function renderAdminView() {
-  if (!canCurrentAccountUseAdmin()) {
-    dom.adminAuthView.classList.remove("hidden");
-    dom.adminSpawnerView.classList.add("hidden");
-    return;
-  }
-
-  dom.adminAuthView.classList.toggle("hidden", adminAuthorized);
-  dom.adminSpawnerView.classList.toggle("hidden", !adminAuthorized);
-}
-
-function renderSailingPage() {
-  if (!dom.sailingPage) {
-    return;
-  }
-
-  const island = getCurrentSailingIsland();
-  const boat = getCurrentSailingBoat();
-  const canAfford = state.money >= getSailingCost();
-  const nextReturn = getNextSailingReturnTime();
-
-  renderSailingIslandOptions();
-  renderSailingBoatOptions();
-  dom.sailingBoatImage.src = SAILING_BOAT_IMAGE;
-  dom.sailingBoatImage.alt = boat.name;
-  dom.sailingIslandName.textContent = island.name;
-  dom.sailingChanceTag.textContent = `${Math.round(boat.brainrotChance * 100)}% Reward Rate`;
-  dom.sailingIslandFlavor.textContent = `${island.flavor} ${boat.flavor}`;
-  dom.sailingAmountInput.value = `${state.sailing.amount}`;
-  dom.sailingCostDisplay.textContent = formatMoney(getSailingCost());
-  dom.sailingActiveCountDisplay.textContent = `${getTotalActiveSails()}`;
-  dom.sailingTimerDisplay.textContent = nextReturn ? formatCountdown(nextReturn - Date.now()) : "Ready";
-  dom.sailingConfirmButton.disabled = !canAfford;
-  dom.sailingRewardPreview.innerHTML = island.rewards
-    .map(
-      (reward) => `
-        <article class="sailing-reward-card">
-          <img class="owned-thumb" src="${reward.img}" alt="${reward.name}" />
-          <div>
-            <p class="owned-name">${reward.name}</p>
-            <p class="owned-meta">${formatMoney(reward.income)}/s</p>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
 }
 
 function isLuckyBlockRewardCharacter(characterId) {
@@ -2194,38 +1627,20 @@ function ensureSelectedOwnedCharacter() {
   selectedOwnedCharacterId = ownedIds.length > 0 ? ownedIds[0] : null;
 }
 
-function renderRebirthPage() {
-  const currentMultiplier = getCashMultiplierForRebirthCount(state.rebirthCount);
-  const nextMultiplier = getNextRebirthMultiplier();
-  const requirement = getRebirthRequirement(state.rebirthCount);
-  const isMaxed = state.rebirthCount >= MAX_REBIRTHS;
-  const nextRebirthNumber = state.rebirthCount + 1;
-
-  dom.rebirthCountDisplay.textContent = `${state.rebirthCount}`;
-  dom.cashMultiplierDisplay.textContent = formatMultiplier(currentMultiplier);
-  dom.nextMultiplierDisplay.textContent = isMaxed ? "MAX" : formatMultiplier(nextMultiplier);
-  dom.rebirthRequirementDisplay.textContent = isMaxed ? "MAXED" : formatMoney(requirement);
-  dom.rebirthDescription.textContent = isMaxed
-    ? "You reached the rebirth cap. Every brainrot is already boosted as far as this system goes."
-    : `Your ${nextRebirthNumber}${getOrdinalSuffix(nextRebirthNumber)} rebirth will boost all brainrots to ${formatMultiplier(nextMultiplier)} cash.`;
-  dom.miniRebirthButton.disabled = isMaxed;
-  dom.miniRebirthButton.textContent = isMaxed ? "Max Rebirth Reached" : "Rebirth";
-}
-
 function render() {
   ensureSelectedOwnedCharacter();
   renderTotals();
   renderCurrentRoll();
   renderRollTimer();
   renderEventTimer();
-  renderSailingPage();
   updateActionButtons();
   renderCollectionActions();
   renderOwned();
   renderOwnedViewer();
-  renderRebirthPage();
-  renderAdminTools();
-  renderInviteAuth();
+  callModuleMethod("rebirth", "render");
+  callModuleMethod("admin", "render");
+  callModuleMethod("sailing", "render");
+  callModuleMethod("accountmanagement", "render");
   saveState();
 }
 
@@ -2331,7 +1746,7 @@ function openRebirthPage() {
     return;
   }
 
-  renderRebirthPage();
+  callModuleMethod("rebirth", "render");
   setRebirthStatus("Rebirth resets your money and owned brainrots, but keeps your multiplier forever.");
 }
 
@@ -2342,7 +1757,7 @@ function closeRebirthPage() {
 function openAdminPage() {
   if (!canCurrentAccountUseAdmin()) {
     if (CURRENT_PAGE === "admin") {
-      renderAdminTools();
+      callModuleMethod("admin", "render");
     } else {
       setStatus("Only whitelisted users can access admin tools.");
     }
@@ -2354,19 +1769,14 @@ function openAdminPage() {
     return;
   }
 
-  renderAdminBrainrotOptions();
-  renderAdminMutationOptions();
-  renderAdminEventOptions();
-  renderAdminTools();
+  callModuleMethod("admin", "render");
   if (!adminAuthorized) {
     dom.adminPasswordInput.value = "";
-    setAdminStatus(
-      canCurrentAccountBypassAdminPassword()
-        ? "Admin unlocked for ADMIN_BAUBER."
-        : "Admin auth is locked.",
-    );
+    dom.adminStatusText.textContent = canCurrentAccountBypassAdminPassword()
+      ? "Admin unlocked for ADMIN_BAUBER."
+      : "Admin auth is locked.";
   } else {
-    setAdminSpawnerStatus("Spawn brainrots directly into your collection.");
+    dom.adminSpawnerStatusText.textContent = "Spawn brainrots directly into your collection.";
   }
 }
 
@@ -2380,8 +1790,8 @@ function openSailingPage() {
     return;
   }
 
-  renderSailingPage();
-  setSailingStatus("Choose an island, boat, and sail amount.");
+  callModuleMethod("sailing", "render");
+  callModuleMethod("sailing", "setSailingStatus", "Choose an island, boat, and sail amount.");
 }
 
 function closeSailingPage() {
@@ -2394,225 +1804,11 @@ function openAccountManagementPage() {
     return;
   }
 
-  renderInviteAuth();
+  callModuleMethod("accountmanagement", "render");
 }
 
 function closeAccountManagementPage() {
   navigateToPage("home");
-}
-
-function submitAdminPassword() {
-  if (!canCurrentAccountUseAdmin()) {
-    adminAuthorized = false;
-    saveAdminAuthorization(false);
-    renderAdminTools();
-    setAdminStatus("Only whitelisted users can use admin tools.");
-    return;
-  }
-
-  if (canCurrentAccountBypassAdminPassword()) {
-    adminAuthorized = true;
-    renderAdminTools();
-    setAdminSpawnerStatus("Admin unlocked for ADMIN_BAUBER.");
-    return;
-  }
-
-  if (dom.adminPasswordInput.value === ADMIN_PASSWORD) {
-    adminAuthorized = true;
-    saveAdminAuthorization(true);
-    renderAdminTools();
-    renderAdminBrainrotOptions();
-    renderAdminMutationOptions();
-    renderAdminEventOptions();
-    setAdminSpawnerStatus("Admin unlocked. Choose mutation, brainrot, and amount.");
-    return;
-  }
-
-  adminAuthorized = false;
-  saveAdminAuthorization(false);
-  renderAdminTools();
-  setAdminStatus("Wrong password.");
-}
-
-function adminSpawnBrainrots() {
-  if (!adminAuthorized) {
-    setAdminStatus("Please enter your password.");
-    return;
-  }
-
-  const mutation = dom.adminMutationSelect.value;
-  const characterId = dom.adminBrainrotSelect.value;
-  const amount = Math.max(1, Math.min(1e18, Number(dom.adminAmountInput.value) || 1));
-  const character = getOwnedCharacterData(characterId);
-
-  if (!characterId || !isKnownCharacterId(characterId)) {
-    setAdminSpawnerStatus("Choose a valid brainrot first.");
-    return;
-  }
-
-  grantOwnedCharacter(characterId, mutation, amount);
-  selectedOwnedCharacterId = characterId;
-  render();
-  setAdminSpawnerStatus(
-    `Spawned ${amount} ${getMutationDisplayName(mutation).toLowerCase()} ${character.name} into your collection.`,
-  );
-}
-
-function adminSetMoney() {
-  if (!adminAuthorized) {
-    setAdminStatus("Please enter your password.");
-    return;
-  }
-
-  const nextMoney = Number.parseFloat(dom.adminSetMoneyInput.value);
-  if (Number.isNaN(nextMoney)) {
-    setAdminSpawnerStatus("Enter a valid money number.");
-    return;
-  }
-
-  state.money = Math.max(0, nextMoney);
-  render();
-  setAdminSpawnerStatus(`Money set to ${formatMoney(state.money)}.`);
-}
-
-function adminSetRebirth() {
-  if (!adminAuthorized) {
-    setAdminStatus("Please enter your password.");
-    return;
-  }
-
-  const nextRebirth = Number.parseInt(dom.adminSetRebirthInput.value, 10);
-  if (Number.isNaN(nextRebirth)) {
-    setAdminSpawnerStatus("Enter a valid rebirth number.");
-    return;
-  }
-
-  state.rebirthCount = Math.max(0, Math.min(MAX_REBIRTHS, nextRebirth));
-  render();
-  setAdminSpawnerStatus(`Rebirth set to ${state.rebirthCount}.`);
-}
-
-function adminSetEvent() {
-  if (!adminAuthorized) {
-    setAdminStatus("Please enter your password.");
-    return;
-  }
-
-  if (!dom.adminEventSelect) {
-    setAdminSpawnerStatus("Refresh the page to load the event controls.");
-    return;
-  }
-
-  const selectedEvent = dom.adminEventSelect.value;
-  if (!EVENT_MUTATION_WEIGHTS[selectedEvent]) {
-    setAdminSpawnerStatus("Choose a valid event.");
-    return;
-  }
-
-  state.event.activeMutation = selectedEvent;
-  state.event.endsAt = Date.now() + EVENT_DURATION_MS;
-  state.event.playSeconds = 0;
-  render();
-  setAdminSpawnerStatus(`${getMutationDisplayName(selectedEvent)} event turned on for 5 minutes.`);
-}
-
-function adminClearEvent() {
-  if (!adminAuthorized) {
-    setAdminStatus("Please enter your password.");
-    return;
-  }
-
-  state.event.activeMutation = null;
-  state.event.endsAt = 0;
-  state.event.playSeconds = 0;
-  render();
-  setAdminSpawnerStatus("Event turned off.");
-}
-
-function handleSailingIslandChange() {
-  if (!dom.sailingIslandSelect) {
-    return;
-  }
-
-  state.sailing.selectedIslandId = dom.sailingIslandSelect.value;
-  render();
-}
-
-function handleSailingBoatChange() {
-  if (!dom.sailingBoatSelect) {
-    return;
-  }
-
-  state.sailing.selectedBoatId = dom.sailingBoatSelect.value;
-  render();
-}
-
-function handleSailingAmountInput() {
-  if (!dom.sailingAmountInput) {
-    return;
-  }
-
-  state.sailing.amount = Math.max(
-    1,
-    Math.min(MAX_SAILS_PER_TRIP, Math.floor(Number(dom.sailingAmountInput.value) || 1)),
-  );
-  render();
-}
-
-function startSailing() {
-  const boat = getCurrentSailingBoat();
-  const cost = getSailingCost();
-
-  if (state.money < cost) {
-    setSailingStatus(`You need ${formatMoney(cost)} to launch this sail.`);
-    render();
-    return;
-  }
-
-  state.money -= cost;
-  state.sailing.jobs.push(
-    normalizeSailingJob({
-      islandId: getCurrentSailingIsland().id,
-      boatId: boat.id,
-      amount: state.sailing.amount,
-      endsAt: Date.now() + SAILING_DURATION_MS,
-    }),
-  );
-
-  setSailingStatus(
-    `Sent ${state.sailing.amount} sail${state.sailing.amount === 1 ? "" : "s"} to ${getCurrentSailingIsland().name}. Return time: 1 minute.`,
-  );
-  render();
-}
-
-function tryRebirth() {
-  if (state.rebirthCount >= MAX_REBIRTHS) {
-    setRebirthStatus("You already reached the max rebirth level.");
-    return;
-  }
-
-  const requirement = getRebirthRequirement(state.rebirthCount);
-  if (state.money < requirement) {
-    setRebirthStatus(`You need ${formatMoney(requirement)} cash before you can rebirth.`);
-    return;
-  }
-
-  state.rebirthCount += 1;
-  state.money = 10;
-  state.currentRoll = null;
-  state.owned = {};
-  state.sailing = normalizeSailingState();
-  state.event = {
-    activeMutation: null,
-    endsAt: 0,
-    playSeconds: 0,
-  };
-  state.lastTick = Date.now();
-
-  ensureCurrentRoll();
-  render();
-  setStatus(`Rebirth complete. All brainrots now earn ${formatMultiplier(getCashMultiplierForRebirthCount(state.rebirthCount))}.`);
-  setRebirthStatus(`Rebirth ${state.rebirthCount} complete. Come back when you are ready for the next one.`);
 }
 
 function uncoverLuckyBlock() {
@@ -2728,7 +1924,7 @@ function tickIncome() {
   renderTotals();
   renderRollTimer();
   renderEventTimer();
-  renderSailingPage();
+  callModuleMethod("sailing", "render");
   updateActionButtons();
   saveState();
 }
@@ -2738,6 +1934,124 @@ function bindClick(element, handler) {
     element.addEventListener("click", handler);
   }
 }
+
+window.BrainrotCore = {
+  dom,
+  characters,
+  luckyBlockCharacters,
+  adminOnlyCharacters,
+  sailingBoats,
+  sailingIslands,
+  sailingIslandById,
+  sailingBoatById,
+  sailingRewardCharacters,
+  luckyBlockCharacterById,
+  MUTATIONS,
+  EVENT_MUTATION_WEIGHTS,
+  defaultLuckyBlockIds,
+  constants: {
+    AUTO_ROLL_SECONDS,
+    MAX_REBIRTHS,
+    MAX_SAILS_PER_TRIP,
+    SAILING_DURATION_MS,
+    SAILING_BOAT_IMAGE,
+    EVENT_DURATION_MS,
+    ADMIN_PASSWORD,
+  },
+  getState: () => state,
+  replaceState(nextState) {
+    state = nextState;
+  },
+  getInviteSystem: () => inviteSystem,
+  setInviteSystem(nextInviteSystem) {
+    inviteSystem = nextInviteSystem;
+  },
+  getActiveAccountId: () => activeAccountId,
+  setActiveAccountId(nextAccountId) {
+    activeAccountId = nextAccountId;
+  },
+  getAutoRollRemaining: () => autoRollRemaining,
+  setAutoRollRemaining(nextValue) {
+    autoRollRemaining = nextValue;
+  },
+  getAdminAuthorized: () => adminAuthorized,
+  setAdminAuthorized(nextValue) {
+    adminAuthorized = nextValue;
+  },
+  getSelectedOwnedCharacterId: () => selectedOwnedCharacterId,
+  setSelectedOwnedCharacterId(nextValue) {
+    selectedOwnedCharacterId = nextValue;
+  },
+  createAccountRecord,
+  ensureAccountHasFourCodes,
+  createDefaultState,
+  normalizeOwnedEntry,
+  normalizeSailingState,
+  normalizeSailingJob,
+  loadInviteSystem,
+  saveInviteSystem,
+  loadState,
+  saveState,
+  loadActiveAccountId,
+  saveActiveAccountId,
+  loadAdminAuthorization,
+  saveAdminAuthorization,
+  getActiveAccount,
+  getRememberedAccounts,
+  findRememberedAccountByName,
+  isAccountNameTaken,
+  getStarterInviteCode,
+  rememberAccount,
+  canCurrentAccountUseAdmin,
+  canCurrentAccountBypassAdminPassword,
+  formatMoney,
+  formatMultiplier,
+  formatCountdown,
+  getMutationConfig,
+  getMutationDisplayName,
+  getMutationChance,
+  getSailingMutationChance,
+  getCashMultiplierForRebirthCount,
+  getNextRebirthMultiplier,
+  getRebirthRequirement,
+  getOrdinalSuffix,
+  getOwnedCharacterData,
+  getLuckyBlockInventory,
+  getMutationMultiplier,
+  isKnownCharacterId,
+  isLuckyBlockRewardCharacter,
+  ensureCurrentRoll,
+  grantOwnedCharacter,
+  setStatus,
+  setRebirthStatus,
+  render,
+  renderTotals,
+  renderRollTimer,
+  renderEventTimer,
+  updateActionButtons,
+  getCurrentSailingIsland,
+  getCurrentSailingBoat,
+  getSailingCost,
+  getApproximateSuccessCount,
+  distributeSailingRewards,
+  splitSailingRewardMutations,
+  getInfiniteBoatBonus,
+  resolveFinishedSailingJobs,
+  applyCurrentPageView,
+  showOnlyPage,
+  navigateToPage,
+  getPageElement,
+  bindClick,
+  rollByWeight,
+  rollLuckyBlockCharacter,
+  resetAutoRollTimer,
+  setNewRoll,
+  createRolledCharacter,
+  syncEventState,
+  maybeStartMutationEvent,
+  getManualRollCost,
+  normalizeCurrentRoll,
+};
 
 bindClick(dom.rollButton, rollCharacter);
 bindClick(dom.buyButton, buyCurrentCharacter);
@@ -2754,76 +2068,11 @@ bindClick(dom.accountManagementBackButton, closeAccountManagementPage);
 bindClick(dom.backToGameButton, closeRebirthPage);
 bindClick(dom.adminBackButton, closeAdminPage);
 bindClick(dom.sailingBackButton, closeSailingPage);
-bindClick(dom.miniRebirthButton, tryRebirth);
-bindClick(dom.adminPasswordSubmitButton, submitAdminPassword);
-bindClick(dom.adminConfirmButton, adminSpawnBrainrots);
-bindClick(dom.adminSetMoneyButton, adminSetMoney);
-bindClick(dom.adminSetRebirthButton, adminSetRebirth);
-bindClick(dom.adminSetEventButton, adminSetEvent);
-bindClick(dom.adminClearEventButton, adminClearEvent);
-bindClick(dom.sailingConfirmButton, startSailing);
-bindClick(dom.inviteCodeSubmitButton, useInviteCode);
-bindClick(dom.inviteEditButton, openInviteRename);
-bindClick(dom.inviteSaveButton, saveInviteName);
-bindClick(dom.rememberedAccountSwitchButton, switchToRememberedAccount);
-bindClick(dom.loginPasswordButton, loginRememberedAccount);
-bindClick(dom.changePasswordButton, changeAccountPassword);
-bindClick(dom.inviteSignOutButton, signOutInviteAccount);
-if (dom.adminPasswordInput) {
-  dom.adminPasswordInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      submitAdminPassword();
-    }
-  });
-}
-if (dom.sailingIslandSelect) {
-  dom.sailingIslandSelect.addEventListener("change", handleSailingIslandChange);
-}
-if (dom.sailingBoatSelect) {
-  dom.sailingBoatSelect.addEventListener("change", handleSailingBoatChange);
-}
-if (dom.sailingAmountInput) {
-  dom.sailingAmountInput.addEventListener("input", handleSailingAmountInput);
-}
-if (dom.inviteCodeInput) {
-  dom.inviteCodeInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      useInviteCode();
-    }
-  });
-}
-if (dom.inviteNameInput) {
-  dom.inviteNameInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      saveInviteName();
-    }
-  });
-}
-if (dom.loginPasswordInput) {
-  dom.loginPasswordInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      loginRememberedAccount();
-    }
-  });
-}
-if (dom.loginUserInput) {
-  dom.loginUserInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      loginRememberedAccount();
-    }
-  });
-}
-if (dom.changePasswordInput) {
-  dom.changePasswordInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      changeAccountPassword();
-    }
-  });
-}
 
 inviteSystem = loadInviteSystem();
 activeAccountId = loadActiveAccountId();
 state = loadState();
+adminAuthorized = loadAdminAuthorization();
 awardOfflineIncome();
 syncEventState();
 resolveFinishedSailingJobs();
