@@ -5,13 +5,34 @@ window.BrainrotModules.accountmanagement = (() => {
   let bound = false;
 
   function normalizeInviteCode(code) {
-    return String(code || "")
+    const compact = String(code || "")
       .trim()
       .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .match(/.{1,4}/g)
-      ?.slice(0, 5)
-      .join("-") || "";
+      .replace(/[^A-Z0-9]/g, "");
+
+    if (!compact) {
+      return "";
+    }
+
+    if (compact.length <= 5) {
+      return compact;
+    }
+
+    return compact.match(/.{1,4}/g)?.slice(0, 5).join("-") || "";
+  }
+
+  function findAccountByName(name) {
+    const api = window.BrainrotCore;
+    const normalizedName = String(name || "").trim().toLowerCase();
+    if (!normalizedName) {
+      return null;
+    }
+
+    return (
+      Object.values(api.getInviteSystem().accounts).find(
+        (account) => account.name.trim().toLowerCase() === normalizedName,
+      ) || null
+    );
   }
 
   function findAccountByInviteCode(code) {
@@ -129,10 +150,10 @@ window.BrainrotModules.accountmanagement = (() => {
 
     const userName = dom.loginUserInput.value.trim();
     const password = dom.loginPasswordInput.value.trim();
-    const account = api.findRememberedAccountByName(userName);
+    const account = findAccountByName(userName);
 
     if (!account) {
-      dom.inviteAuthText.textContent = "User not found in remembered accounts.";
+      dom.inviteAuthText.textContent = "User not found.";
       return;
     }
 
