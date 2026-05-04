@@ -1,204 +1,250 @@
-window.BRAINROT_PAGE = "sailing";
-window.BrainrotModules = window.BrainrotModules || {};
+/* ================================================================
+   sailing.js — Sailing system: boats, islands, reward distribution
+   ================================================================ */
 
-window.BrainrotModules.sailing = (() => {
+window.Sailing = (() => {
+  const D = () => window.GameData;
+  const U = () => window.GameUtils;
+  const S = () => window.GameState;
+  const UI = () => window.GameUI;
+  const G = () => window.Game;
   let bound = false;
 
-  function getCurrentSailingIsland() {
-    return window.BrainrotCore.getCurrentSailingIsland();
+  /* ---------- Helpers ---------- */
+
+  function getIsland() {
+    const st = S().getState();
+    return D().sailingIslandById[st.sailing.selectedIslandId] || D().sailingIslands[0];
   }
 
-  function getCurrentSailingBoat() {
-    return window.BrainrotCore.getCurrentSailingBoat();
+  function getBoat() {
+    const st = S().getState();
+    return D().sailingBoatById[st.sailing.selectedBoatId] || D().sailingBoats[0];
   }
 
-  function getSailingCost() {
-    return window.BrainrotCore.getSailingCost();
+  function getCost() {
+    return getBoat().cost * S().getState().sailing.amount;
   }
 
   function getTotalActiveSails() {
-    return window.BrainrotCore.getState().sailing.jobs.reduce((total, job) => total + job.amount, 0);
+    return S().getState().sailing.jobs.reduce((t, j) => t + j.amount, 0);
   }
 
-  function getNextSailingReturnTime() {
-    const jobs = window.BrainrotCore.getState().sailing.jobs;
-    if (jobs.length === 0) {
-      return null;
-    }
-
-    return Math.min(...jobs.map((job) => job.endsAt));
+  function getNextReturnTime() {
+    const jobs = S().getState().sailing.jobs;
+    if (jobs.length === 0) return null;
+    return Math.min(...jobs.map((j) => j.endsAt));
   }
 
-  function setSailingStatus(message) {
-    const { dom } = window.BrainrotCore;
-    if (dom.sailingStatusText) {
-      dom.sailingStatusText.textContent = message;
-    }
+  function setSailingStatus(msg) {
+    const d = UI().dom;
+    if (d.sailingStatusText) d.sailingStatusText.textContent = msg;
   }
 
-  function renderIslandOptions() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!dom.sailingIslandSelect) {
-      return;
+  function getApproximateSuccessCount(amount, chance) {
+    if (amount <= 5000) {
+      let successes = 0;
+      for (let i = 0; i < amount; i++) {
+        if (Math.random() < chance) successes++;
+      }
+      return successes;
     }
-
-    dom.sailingIslandSelect.innerHTML = api.sailingIslands
-      .map((island) => `<option value="${island.id}">${island.name}</option>`)
-      .join("");
-    dom.sailingIslandSelect.value = getCurrentSailingIsland().id;
+    const mean = amount * chance;
+    const variance = Math.sqrt(amount * chance * (1 - chance));
+    const wobble = (Math.random() - 0.5) * 2 * variance;
+    return Math.max(0, Math.min(amount, Math.round(mean + wobble)));
   }
 
-  function renderBoatOptions() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!dom.sailingBoatSelect) {
-      return;
+  function getSailingMutationChance(mutation) {
+    const st = S().getState();
+    const C = D().CONST;
+    if (mutation === "rainbow") {
+      return C.SAILING_RAINBOW_CHANCE + (st.event.activeMutation === "rainbow" ? C.SAILING_EVENT_MUTATION_BONUS : 0);
     }
-
-    dom.sailingBoatSelect.innerHTML = api.sailingBoats
-      .map((boat) => `<option value="${boat.id}">${boat.name}</option>`)
-      .join("");
-    dom.sailingBoatSelect.value = getCurrentSailingBoat().id;
+    if (mutation === "radioactive") {
+      return C.SAILING_RADIOACTIVE_CHANCE + (st.event.activeMutation === "radioactive" ? C.SAILING_EVENT_MUTATION_BONUS : 0);
+    }
+    if (mutation === "diamond") {
+      return C.SAILING_DIAMOND_CHANCE + (st.event.activeMutation === "diamond" ? C.SAILING_EVENT_MUTATION_BONUS : 0);
+    }
+    return 0;
   }
 
-  function render() {
-    const api = window.BrainrotCore;
-    const state = api.getState();
-    const { dom } = api;
-    if (!dom.sailingPage) {
-      return;
+  function distributeSailingRewards(successCount, rewards) {
+    if (successCount <= 0) return [];
+    if (successCount <= 5000) {
+      const counts = new Map();
+      for (let i = 0; i < successCount; i++) {
+        const reward = U().rollByWeight(rewards, "sailingValue");
+        counts.set(reward.id, (counts.get(reward.id) || 0) + 1);
+      }
+      return rewards.map((r) => ({ reward: r, count: counts.get(r.id) || 0 })).filter((e) => e.count > 0);
     }
-
-    const island = getCurrentSailingIsland();
-    const boat = getCurrentSailingBoat();
-    const canAfford = state.money >= getSailingCost();
-    const nextReturn = getNextSailingReturnTime();
-
-    renderIslandOptions();
-    renderBoatOptions();
-    dom.sailingBoatImage.src = api.constants.SAILING_BOAT_IMAGE;
-    dom.sailingBoatImage.alt = boat.name;
-    dom.sailingIslandName.textContent = island.name;
-    dom.sailingChanceTag.textContent = `${Math.round(boat.brainrotChance * 100)}% Reward Rate`;
-    dom.sailingIslandFlavor.textContent = `${island.flavor} ${boat.flavor}`;
-    dom.sailingAmountInput.value = `${state.sailing.amount}`;
-    dom.sailingCostDisplay.textContent = api.formatMoney(getSailingCost());
-    dom.sailingActiveCountDisplay.textContent = `${getTotalActiveSails()}`;
-    dom.sailingTimerDisplay.textContent = nextReturn ? api.formatCountdown(nextReturn - Date.now()) : "Ready";
-    dom.sailingConfirmButton.disabled = !canAfford;
-    dom.sailingRewardPreview.innerHTML = island.rewards
-      .map(
-        (reward) => `
-          <article class="sailing-reward-card">
-            <img class="owned-thumb" src="${reward.img}" alt="${reward.name}" />
-            <div>
-              <p class="owned-name">${reward.name}</p>
-              <p class="owned-meta">${api.formatMoney(reward.income)}/s</p>
-            </div>
-          </article>
-        `,
-      )
-      .join("");
+    const totalValue = rewards.reduce((t, r) => t + r.sailingValue, 0);
+    let assigned = 0;
+    return rewards.map((r, i) => {
+      const isLast = i === rewards.length - 1;
+      const count = isLast ? successCount - assigned : Math.max(0, Math.round((successCount * r.sailingValue) / totalValue));
+      assigned += count;
+      return { reward: r, count };
+    }).filter((e) => e.count > 0);
   }
 
-  function handleSailingIslandChange() {
-    const api = window.BrainrotCore;
-    if (!api.dom.sailingIslandSelect) {
-      return;
-    }
-
-    api.getState().sailing.selectedIslandId = api.dom.sailingIslandSelect.value;
-    api.render();
+  function splitSailingRewardMutations(amount) {
+    if (amount <= 0) return { normal: 0, rainbow: 0, diamond: 0, radioactive: 0 };
+    const radioactiveChance = getSailingMutationChance("radioactive");
+    const diamondChance = getSailingMutationChance("diamond");
+    const rainbowChance = getSailingMutationChance("rainbow");
+    const radioactiveCount = getApproximateSuccessCount(amount, radioactiveChance);
+    const remainingAfterRadioactive = Math.max(0, amount - radioactiveCount);
+    const diamondCount = getApproximateSuccessCount(remainingAfterRadioactive, diamondChance);
+    const remainingAfterDiamond = Math.max(0, remainingAfterRadioactive - diamondCount);
+    const rainbowCount = getApproximateSuccessCount(remainingAfterDiamond, rainbowChance);
+    return {
+      normal: Math.max(0, amount - radioactiveCount - diamondCount - rainbowCount),
+      rainbow: rainbowCount,
+      diamond: diamondCount,
+      radioactive: radioactiveCount,
+    };
   }
 
-  function handleSailingBoatChange() {
-    const api = window.BrainrotCore;
-    if (!api.dom.sailingBoatSelect) {
-      return;
-    }
-
-    api.getState().sailing.selectedBoatId = api.dom.sailingBoatSelect.value;
-    api.render();
+  function getInfiniteBoatBonus(amount, boat) {
+    if (!boat.moneyBonusChance || !boat.moneyBonusMin || !boat.moneyBonusMax) return 0;
+    const bonusTrips = getApproximateSuccessCount(amount, boat.moneyBonusChance);
+    if (bonusTrips <= 0) return 0;
+    return bonusTrips * (boat.moneyBonusMin + boat.moneyBonusMax) / 2;
   }
 
-  function handleSailingAmountInput() {
-    const api = window.BrainrotCore;
-    if (!api.dom.sailingAmountInput) {
-      return;
+  /* ---------- Resolve finished jobs ---------- */
+
+  function resolveFinished() {
+    const st = S().getState();
+    if (!st.sailing?.jobs?.length) return;
+
+    const now = Date.now();
+    const completed = st.sailing.jobs.filter((j) => j.endsAt <= now);
+    if (completed.length === 0) return;
+
+    st.sailing.jobs = st.sailing.jobs.filter((j) => j.endsAt > now);
+
+    let totalRewarded = 0;
+    let totalMoneyBonus = 0;
+
+    for (const job of completed) {
+      const island = D().sailingIslandById[job.islandId] || D().sailingIslands[0];
+      const boat = D().sailingBoatById[job.boatId] || D().sailingBoats[0];
+      const successCount = getApproximateSuccessCount(job.amount, boat.brainrotChance);
+      const entries = distributeSailingRewards(successCount, island.rewards);
+
+      for (const entry of entries) {
+        const muts = splitSailingRewardMutations(entry.count);
+        if (muts.normal > 0) G().grantOwnedCharacter(entry.reward.id, "normal", muts.normal);
+        if (muts.rainbow > 0) G().grantOwnedCharacter(entry.reward.id, "rainbow", muts.rainbow);
+        if (muts.diamond > 0) G().grantOwnedCharacter(entry.reward.id, "diamond", muts.diamond);
+        if (muts.radioactive > 0) G().grantOwnedCharacter(entry.reward.id, "radioactive", muts.radioactive);
+        totalRewarded += entry.count;
+      }
+      totalMoneyBonus += getInfiniteBoatBonus(job.amount, boat);
     }
 
-    api.getState().sailing.amount = Math.max(
-      1,
-      Math.min(api.constants.MAX_SAILS_PER_TRIP, Math.floor(Number(api.dom.sailingAmountInput.value) || 1)),
-    );
-    api.render();
-  }
-
-  function startSailing() {
-    const api = window.BrainrotCore;
-    const state = api.getState();
-    const boat = getCurrentSailingBoat();
-    const cost = getSailingCost();
-
-    if (state.money < cost) {
-      setSailingStatus(`You need ${api.formatMoney(cost)} to launch this sail.`);
-      api.render();
-      return;
-    }
-
-    state.money -= cost;
-    state.sailing.jobs.push(
-      api.normalizeSailingJob({
-        islandId: getCurrentSailingIsland().id,
-        boatId: boat.id,
-        amount: state.sailing.amount,
-        endsAt: Date.now() + api.constants.SAILING_DURATION_MS,
-      }),
-    );
+    if (totalMoneyBonus > 0) st.money += totalMoneyBonus;
 
     setSailingStatus(
-      `Sent ${state.sailing.amount} sail${state.sailing.amount === 1 ? "" : "s"} to ${getCurrentSailingIsland().name}. Return time: 1 minute.`,
+      totalMoneyBonus > 0
+        ? `Sails returned with ${totalRewarded} brainrots and ${U().formatMoney(totalMoneyBonus)} bonus cash.`
+        : `Sails returned with ${totalRewarded} brainrots.`,
     );
-    api.render();
   }
 
-  function bind() {
-    if (bound) {
+  /* ---------- Render ---------- */
+
+  function render() {
+    const d = UI().dom;
+    if (!d.sailingPage) return;
+
+    const st = S().getState();
+    const island = getIsland();
+    const boat = getBoat();
+    const canAfford = st.money >= getCost();
+    const nextReturn = getNextReturnTime();
+
+    // Options
+    if (d.sailingIslandSelect) {
+      d.sailingIslandSelect.innerHTML = D().sailingIslands.map((i) => `<option value="${i.id}">${i.name}</option>`).join("");
+      d.sailingIslandSelect.value = island.id;
+    }
+    if (d.sailingBoatSelect) {
+      d.sailingBoatSelect.innerHTML = D().sailingBoats.map((b) => `<option value="${b.id}">${b.name}</option>`).join("");
+      d.sailingBoatSelect.value = boat.id;
+    }
+
+    d.sailingBoatImage.src = D().CONST.SAILING_BOAT_IMAGE;
+    d.sailingBoatImage.alt = boat.name;
+    d.sailingIslandName.textContent = island.name;
+    d.sailingChanceTag.textContent = `${Math.round(boat.brainrotChance * 100)}% Reward Rate`;
+    d.sailingIslandFlavor.textContent = `${island.flavor} ${boat.flavor}`;
+    d.sailingAmountInput.value = `${st.sailing.amount}`;
+    d.sailingCostDisplay.textContent = U().formatMoney(getCost());
+    d.sailingActiveCountDisplay.textContent = `${getTotalActiveSails()}`;
+    d.sailingTimerDisplay.textContent = nextReturn ? U().formatCountdown(nextReturn - Date.now()) : "Ready";
+    d.sailingConfirmButton.disabled = !canAfford;
+  }
+
+  /* ---------- Actions ---------- */
+
+  function startSailing() {
+    const st = S().getState();
+    const boat = getBoat();
+    const cost = getCost();
+
+    if (st.money < cost) {
+      setSailingStatus(`You need ${U().formatMoney(cost)} to launch this sail.`);
+      G().fullRender();
       return;
     }
 
-    const api = window.BrainrotCore;
-    const { dom } = api;
+    st.money -= cost;
+    st.sailing.jobs.push(S().normalizeSailingJob({
+      islandId: getIsland().id,
+      boatId: boat.id,
+      amount: st.sailing.amount,
+      endsAt: Date.now() + D().CONST.SAILING_DURATION_MS,
+    }));
 
-    api.bindClick(dom.sailingConfirmButton, startSailing);
-    if (dom.sailingIslandSelect) {
-      dom.sailingIslandSelect.addEventListener("change", handleSailingIslandChange);
-    }
-    if (dom.sailingBoatSelect) {
-      dom.sailingBoatSelect.addEventListener("change", handleSailingBoatChange);
-    }
-    if (dom.sailingAmountInput) {
-      dom.sailingAmountInput.addEventListener("input", handleSailingAmountInput);
-    }
+    setSailingStatus(`Sent ${st.sailing.amount} sail${st.sailing.amount === 1 ? "" : "s"} to ${getIsland().name}. Return time: 1 minute.`);
+    G().fullRender();
+  }
 
+  function handleIslandChange() {
+    S().getState().sailing.selectedIslandId = UI().dom.sailingIslandSelect.value;
+    G().fullRender();
+  }
+  function handleBoatChange() {
+    S().getState().sailing.selectedBoatId = UI().dom.sailingBoatSelect.value;
+    G().fullRender();
+  }
+  function handleAmountInput() {
+    const v = Math.max(1, Math.min(D().CONST.MAX_SAILS_PER_TRIP, Math.floor(Number(UI().dom.sailingAmountInput.value) || 1)));
+    S().getState().sailing.amount = v;
+    G().fullRender();
+  }
+
+  /* ---------- Bind & boot ---------- */
+
+  function bind() {
+    if (bound) return;
+    const d = UI().dom;
+    UI().bindClick(d.sailingConfirmButton, startSailing);
+    d.sailingIslandSelect?.addEventListener("change", handleIslandChange);
+    d.sailingBoatSelect?.addEventListener("change", handleBoatChange);
+    d.sailingAmountInput?.addEventListener("input", handleAmountInput);
     bound = true;
   }
 
   function boot() {
-    const api = window.BrainrotCore;
-    api.applyCurrentPageView();
     bind();
     render();
   }
 
-  return {
-    boot,
-    render,
-    setSailingStatus,
-  };
+  return { boot, render, resolveFinished, setSailingStatus };
 })();
-
-window.PAGE_BOOT = function pageBootSailing() {
-  window.BrainrotModules.sailing.boot();
-};

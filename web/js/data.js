@@ -1,0 +1,840 @@
+/* ================================================================
+   data.js — Game data definitions, constants, and lookup maps
+   ================================================================ */
+
+const characters = [
+  {
+    id: "67",
+    name: "67",
+    value: 6,
+    cost: 10,
+    income: 1,
+    flavor: "67! the chaos in 2025",
+    img: "img/67.jpg",
+  },
+  {
+    id: "tung-tung-tung-sahur",
+    name: "Tung Tung Tung Sahur",
+    value: 3,
+    cost: 50,
+    income: 5,
+    flavor: "the original brainrot and also the first brainrot made by OG Noxa",
+    img: "img/ttt.webp",
+  },
+  {
+    id: "ballerina-cappuccina",
+    name: "Ballerina Cappuccina",
+    value: 3,
+    cost: 50,
+    income: 5,
+    flavor: "Tung tung's wife",
+    img: "img/ballerina.jfif",
+  },
+  {
+    id: "tralalero-tralala",
+    name: "Tralalelo Tralala",
+    value: 3,
+    cost: 50,
+    income: 5,
+    flavor: "tung tung's friend who is beside the sea",
+    img: "img/tralalelo.jfif",
+  },
+  {
+    id: "fluri-flura",
+    name: "Fluri Flura",
+    value: 4.5,
+    cost: 25,
+    income: 2.5,
+    flavor: "flying across the sea!",
+    img: "img/Fluriflura.webp",
+  },
+  {
+    id: "strawberry-elephant",
+    name: "Strawberry Elephant",
+    value: 0.003,
+    cost: 5e12,
+    income: 1e8,
+    flavor: 'the first "brainrot" ever made, made in 2009. The OG of all OGs.',
+    img: "img/Strawberry-elephant.jpg",
+  },
+  {
+    id: "lucky-block",
+    name: "Lucky Block",
+    value: 2,
+    cost: 75,
+    income: 0,
+    flavor: "A sealed brainrot box. Buy it, stash it, then uncover it inside your collection.",
+    img: "img/lucky-block.jfif",
+    isLuckyBlock: true,
+  },
+  // ---- OG tier (once in a lifetime) ----
+  {
+    id: "meowl",
+    name: "Meowl",
+    value: 0.005,
+    cost: 4e12,
+    income: 5e7,
+    flavor: "Half cat, half owl, all myth. Almost no one has ever seen one.",
+    img: null,
+  },
+  {
+    id: "skibidi-toilet",
+    name: "Skibidi Toilet",
+    value: 0.01,
+    cost: 3e12,
+    income: 3e7,
+    flavor: "The toilet that started a war. Skibidi dop dop dop yes yes.",
+    img: null,
+  },
+  {
+    id: "blackhole-goat",
+    name: "Blackhole Goat",
+    value: 0.015,
+    cost: 2.5e12,
+    income: 2e7,
+    flavor: "A goat so powerful it bends spacetime. The admin's personal brainrot.",
+    img: null,
+  },
+  // ---- Divine tier ----
+  {
+    id: "la-grande-combinasion",
+    name: "La Grande Combinasion",
+    value: 0.03,
+    cost: 3e11,
+    income: 1e7,
+    flavor: "The ultimate fusion. Every brainrot combined into one supreme being.",
+    img: null,
+  },
+  {
+    id: "guest-666",
+    name: "Guest 666",
+    value: 0.05,
+    cost: 2.8e11,
+    income: 8e6,
+    flavor: "The cursed guest. Legends say rolling this one changes your account forever.",
+    img: null,
+  },
+  {
+    id: "nuclearo-dinossauro",
+    name: "Nuclearo Dinossauro",
+    value: 0.07,
+    cost: 2.4e11,
+    income: 6e6,
+    flavor: "A dinosaur powered by nuclear energy. Extinction only made it stronger.",
+    img: null,
+  },
+  {
+    id: "dragon-cannelloni-secret",
+    name: "Dragon Cannelloni",
+    value: 0.10,
+    cost: 1.8e11,
+    income: 4e6,
+    flavor: "The secret pasta dragon. Its flames are made of marinara and gold.",
+    img: null,
+  },
+  // ---- Celestial tier ----
+  {
+    id: "pot-hotspot-secret",
+    name: "Pot Hotspot",
+    value: 0.15,
+    cost: 1.8e10,
+    income: 1.5e6,
+    flavor: "A hotspot so hot it cooks money directly into your account.",
+    img: null,
+  },
+  {
+    id: "la-vacca-saturno",
+    name: "La Vacca Saturno Saturnita",
+    value: 0.20,
+    cost: 1.2e10,
+    income: 800000,
+    flavor: "A cosmic cow floating through Saturn's rings, raining milk and money.",
+    img: null,
+  },
+  {
+    id: "los-tralaleritos",
+    name: "Los Tralaleritos",
+    value: 0.25,
+    cost: 8.5e9,
+    income: 500000,
+    flavor: "An entire squad of tiny Tralaleros. Together they sing and earn.",
+    img: null,
+  },
+  {
+    id: "graipuss-medussi",
+    name: "Graipuss Medussi",
+    value: 0.30,
+    cost: 7e9,
+    income: 350000,
+    flavor: "A jellyfish made of grape juice. Stings you with pure flavor and profit.",
+    img: null,
+  },
+  // ---- Secret tier ----
+  {
+    id: "cocofanto-elefanto",
+    name: "Cocofanto Elefanto",
+    value: 0.40,
+    cost: 8e8,
+    income: 200000,
+    flavor: "A coconut elephant hybrid from the deepest tropics. Massive and majestic.",
+    img: null,
+  },
+  {
+    id: "girafa-celestre",
+    name: "Girafa Celestre",
+    value: 0.55,
+    cost: 5.5e8,
+    income: 120000,
+    flavor: "A giraffe that reaches into the stars. Its neck spans galaxies.",
+    img: null,
+  },
+  {
+    id: "odin-din-din-dun",
+    name: "Odin Din Din Dun",
+    value: 0.65,
+    cost: 4e8,
+    income: 80000,
+    flavor: "The Allfather of brainrot. His ravens collect cash from every realm.",
+    img: null,
+  },
+  {
+    id: "piccione-macchina",
+    name: "Piccione Macchina",
+    value: 0.78,
+    cost: 3e8,
+    income: 55000,
+    flavor: "A pigeon fused with a sports car. Coos at 200mph and prints money.",
+    img: null,
+  },
+  {
+    id: "ballerino-lololo",
+    name: "Ballerino Lololo",
+    value: 0.88,
+    cost: 2.5e8,
+    income: 40000,
+    flavor: "Ballerina Cappuccina's long-lost twin. Dances with unmatched grace.",
+    img: null,
+  },
+  // ---- Mythic tier ----
+  {
+    id: "frigo-camelo",
+    name: "Frigo Camelo",
+    value: 1.0,
+    cost: 2.5e7,
+    income: 20000,
+    flavor: "A camel that's also a refrigerator. Keeps your cash fresh and cold.",
+    img: null,
+  },
+  {
+    id: "orangutini-ananassini",
+    name: "Orangutini Ananassini",
+    value: 1.3,
+    cost: 1.9e7,
+    income: 14000,
+    flavor: "An orangutan with pineapple flavor. Tropical primate power.",
+    img: null,
+  },
+  {
+    id: "rhino-toasterino",
+    name: "Rhino Toasterino",
+    value: 1.6,
+    cost: 1.5e7,
+    income: 10000,
+    flavor: "A rhinoceros that toasts bread with its horn. Breakfast and income secured.",
+    img: null,
+  },
+  {
+    id: "bombardiro-crocodilo",
+    name: "Bombardiro Crocodilo",
+    value: 1.9,
+    cost: 1.2e7,
+    income: 7500,
+    flavor: "A crocodile that explodes into more crocodiles. Each one earns cash.",
+    img: null,
+  },
+  {
+    id: "bombombini-gusini",
+    name: "Bombombini Gusini",
+    value: 2.2,
+    cost: 9.5e6,
+    income: 5500,
+    flavor: "Tiny bombs with big personalities. Each explosion is profitable.",
+    img: null,
+  },
+  {
+    id: "cavallo-virtuoso",
+    name: "Cavallo Virtuoso",
+    value: 2.5,
+    cost: 8e6,
+    income: 4200,
+    flavor: "A virtuoso horse that plays symphonies. Each note is worth thousands.",
+    img: null,
+  },
+  {
+    id: "ganganzelli-trulala",
+    name: "Ganganzelli Trulala",
+    value: 2.8,
+    cost: 6.5e6,
+    income: 3200,
+    flavor: "Trulala's long-lost cousin from the city. Twice the style, twice the cash.",
+    img: null,
+  },
+  // ---- God tier ----
+  {
+    id: "burbaloni-loliloli",
+    name: "Burbaloni Loliloli",
+    value: 3.2,
+    cost: 7e5,
+    income: 1800,
+    flavor: "A bubble-blowing legend. Every bubble pops into dollar bills.",
+    img: null,
+  },
+  {
+    id: "chimpanzini-bananini",
+    name: "Chimpanzini Bananini",
+    value: 3.6,
+    cost: 6e5,
+    income: 1500,
+    flavor: "A chimpanzee whose bananas are solid gold. Peel carefully.",
+    img: null,
+  },
+  {
+    id: "chef-crabracadabra",
+    name: "Chef Crabracadabra",
+    value: 4.0,
+    cost: 5.5e5,
+    income: 1200,
+    flavor: "A crab chef who cooks magical dishes. Each meal earns a fortune.",
+    img: null,
+  },
+  {
+    id: "glorbo-fruttodrillo",
+    name: "Glorbo Fruttodrillo",
+    value: 4.5,
+    cost: 5e5,
+    income: 1000,
+    flavor: "A fruit-covered crocodile. Sweet on the outside, fierce on the inside.",
+    img: null,
+  },
+  {
+    id: "sigma-boy",
+    name: "Sigma Boy",
+    value: 5.0,
+    cost: 4.5e5,
+    income: 850,
+    flavor: "The ultimate sigma grindset. Doesn't chase, attracts. Especially money.",
+    img: null,
+  },
+  {
+    id: "sigma-girl",
+    name: "Sigma Girl",
+    value: 5.5,
+    cost: 4e5,
+    income: 720,
+    flavor: "Independent, powerful, and printing cash. Sigma energy at its finest.",
+    img: null,
+  },
+  {
+    id: "sealo-regalo",
+    name: "Sealo Regalo",
+    value: 6.0,
+    cost: 3.7e5,
+    income: 620,
+    flavor: "A Christmas seal that brings gifts all year round. Ho ho ho, here's your cash.",
+    img: null,
+  },
+  {
+    id: "quivioli-ameleonni",
+    name: "Quivioli Ameleonni",
+    value: 6.5,
+    cost: 3.5e5,
+    income: 530,
+    flavor: "A chameleon that changes color with every dollar earned. Always dazzling.",
+    img: null,
+  },
+  // ---- Epic tier ----
+  {
+    id: "cappuccino-assassino",
+    name: "Cappuccino Assassino",
+    value: 4.2,
+    cost: 50000,
+    income: 380,
+    flavor: "A cappuccino with deadly skills. Eliminates your financial problems silently.",
+    img: null,
+  },
+  {
+    id: "bandito-axolito",
+    name: "Bandito Axolito",
+    value: 4.8,
+    cost: 45000,
+    income: 300,
+    flavor: "An axolotl bandit who steals from the rich and gives to... you.",
+    img: null,
+  },
+  {
+    id: "brr-brr-patapim",
+    name: "Brr Brr Patapim",
+    value: 5.3,
+    cost: 40000,
+    income: 250,
+    flavor: "Brr brr goes the phone. Patapim goes the cash register.",
+    img: null,
+  },
+  {
+    id: "avocadini-antilopini",
+    name: "Avocadini Antilopini",
+    value: 5.8,
+    cost: 38000,
+    income: 210,
+    flavor: "An avocado-antelope hybrid. Healthy fats and fast feet.",
+    img: null,
+  },
+  {
+    id: "trulimero-trulicina",
+    name: "Trulimero Trulicina",
+    value: 6.3,
+    cost: 35000,
+    income: 175,
+    flavor: "Double the trulala, double the fun. Tralalero's favorite neighbors.",
+    img: null,
+  },
+  {
+    id: "bananita-dolphinita",
+    name: "Bananita Dolphinita",
+    value: 6.8,
+    cost: 32000,
+    income: 145,
+    flavor: "A banana-loving dolphin that jumps through hoops of pure profit.",
+    img: null,
+  },
+  {
+    id: "wombo-rollo",
+    name: "Wombo Rollo",
+    value: 7.8,
+    cost: 25000,
+    income: 100,
+    flavor: "He wombo, he rollo, he makes your wallet swollo.",
+    img: null,
+  },
+  // ---- Uncommon tier ----
+  {
+    id: "trippi-troppi",
+    name: "Trippi Troppi",
+    value: 8,
+    cost: 3500,
+    income: 70,
+    flavor: "Always tripping over money. Clumsy but wealthy.",
+    img: null,
+  },
+  {
+    id: "gangster-footera",
+    name: "Gangster Footera",
+    value: 9,
+    cost: 3000,
+    income: 52,
+    flavor: "The toughest foot in the game. Kicks problems away and money toward you.",
+    img: null,
+  },
+  {
+    id: "bandito-bobritto",
+    name: "Bandito Bobritto",
+    value: 10,
+    cost: 2500,
+    income: 38,
+    flavor: "A tiny bandit with a big attitude. Robs the bank and shares with you.",
+    img: null,
+  },
+  {
+    id: "boneca-ambalabu",
+    name: "Boneca Ambalabu",
+    value: 11,
+    cost: 2000,
+    income: 28,
+    flavor: "A mysterious doll that whispers stock tips at midnight.",
+    img: null,
+  },
+  {
+    id: "cacto-hipopotamo",
+    name: "Cacto Hipopotamo",
+    value: 12,
+    cost: 1600,
+    income: 20,
+    flavor: "A hippo covered in cactus spines. Prickly but surprisingly generous.",
+    img: null,
+  },
+  // ---- Common tier ----
+  {
+    id: "pipi-corni",
+    name: "Pipi Corni",
+    value: 28,
+    cost: 15,
+    income: 0.5,
+    flavor: "A tiny corn kernel with big dreams. Cheap but every penny counts.",
+    img: null,
+  },
+  {
+    id: "tartaragno",
+    name: "Tartaragno",
+    value: 30,
+    cost: 40,
+    income: 1.2,
+    flavor: "A sleepy turtle that slowly but surely fills your wallet.",
+    img: null,
+  },
+  {
+    id: "raccooni-jandelini",
+    name: "Raccooni Jandelini",
+    value: 32,
+    cost: 80,
+    income: 2.5,
+    flavor: "A sneaky raccoon in flip-flops. Steals trash and turns it into treasure.",
+    img: null,
+  },
+  {
+    id: "holy-arepa",
+    name: "Holy Arepa",
+    value: 34,
+    cost: 120,
+    income: 4,
+    flavor: "A blessed corn cake. Divine flavor, modest income.",
+    img: null,
+  },
+  {
+    id: "noobini-pizzanini",
+    name: "Noobini Pizzanini",
+    value: 14,
+    cost: 25,
+    income: 1,
+    flavor: "The very first brainrot. A noob holding pizza. Humble beginnings.",
+    img: null,
+  },
+  {
+    id: "lirili-larila",
+    name: "Lirili Larila",
+    value: 16,
+    cost: 75,
+    income: 3,
+    flavor: "A gentle melody in brainrot form. Soft, calming, and slightly profitable.",
+    img: null,
+  },
+  {
+    id: "tim-cheese",
+    name: "Tim Cheese",
+    value: 18,
+    cost: 150,
+    income: 5,
+    flavor: "Just a guy named Tim who really likes cheese. The cheese economy is booming.",
+    img: null,
+  },
+  {
+    id: "talpa-di-fero",
+    name: "Talpa Di Fero",
+    value: 20,
+    cost: 300,
+    income: 9,
+    flavor: "An iron mole that digs through the earth and surfaces with spare change.",
+    img: null,
+  },
+  {
+    id: "svinina-bombardino",
+    name: "Svinina Bombardino",
+    value: 22,
+    cost: 350,
+    income: 10,
+    flavor: "Explosive pork energy. Goes boom and leaves behind crispy bacon and coins.",
+    img: null,
+  },
+];
+
+const luckyBlockCharacters = [
+  {
+    id: "Tortugini-dragonfruitini",
+    name: "Tortugini dragonfruitini",
+    value: 0,
+    luckyBlockValue: 15,
+    income: 20,
+    img: "img/tort.jfif",
+    luckyBlockOnly: false,
+  },
+  {
+    id: "pot-hotspot",
+    name: "Pot Hotspot",
+    value: 0,
+    luckyBlockValue: 5,
+    income: 75,
+    img: "img/Pot-Hotspot.png",
+    luckyBlockOnly: false,
+  },
+  {
+    id: "dragon-cannelloni",
+    name: "Dragon Cannelloni",
+    value: 0,
+    luckyBlockValue: 0.4,
+    income: 100,
+    img: "img/dragon.webp",
+    luckyBlockOnly: false,
+  },
+  {
+    id: "classic-dragon",
+    name: "Classic Dragon",
+    value: 0,
+    luckyBlockValue: 0.0008,
+    income: 10000000,
+    img: "img/chinese-dragon.webp",
+    luckyBlockOnly: false,
+  },
+];
+
+const adminOnlyCharacters = [];
+
+const SAILING_DURATION_MS = 60 * 1000;
+const MAX_SAILS_PER_TRIP = 1e18;
+const SAILING_BOAT_IMAGE =
+  "https://commons.wikimedia.org/wiki/Special:Redirect/file/Sailboat_illustration.svg";
+
+const sailingBoats = [
+  {
+    id: "traveler-boat",
+    name: "Boat for Travelers",
+    brainrotChance: 0.05,
+    cost: 1e7,
+    flavor: "Cheap starter boat. It only has a small shot at bringing a brainrot back.",
+  },
+  {
+    id: "expert-boat",
+    name: "Boat for Experts",
+    brainrotChance: 0.2,
+    cost: 1e13,
+    flavor: "A serious brainrot hunting vessel with better odds.",
+  },
+  {
+    id: "super-boat",
+    name: "Super Boat",
+    brainrotChance: 0.5,
+    cost: 1e15,
+    flavor: "Half your sails should come back with something strange.",
+  },
+  {
+    id: "god-boat",
+    name: "God Boat",
+    brainrotChance: 0.99,
+    cost: 1e18,
+    flavor: "Almost every trip returns with a brainrot reward.",
+  },
+  {
+    id: "infinite-boat",
+    name: "Infinite Boat",
+    brainrotChance: 1,
+    cost: 1e20,
+    moneyBonusChance: 0.1,
+    moneyBonusMin: 1e16,
+    moneyBonusMax: 1e17,
+    flavor: "Guaranteed brainrot haul, with a chance to drag back a giant QA money bonus too.",
+  },
+];
+
+const sailingIslands = [
+  {
+    id: "legendary-island",
+    name: "Legendary Island",
+    flavor: "Home to classic brainrots that ruled the early internet. Pure nostalgia and solid income.",
+    rewards: [
+      {
+        id: "penguino-cocosino",
+        name: "Penguino Cocosino",
+        sailingValue: 5,
+        income: 300,
+        flavor: "A penguin cracking open a coconut. Refreshingly profitable.",
+        img: null,
+      },
+      {
+        id: "frogo-elfo",
+        name: "Frogo Elfo",
+        sailingValue: 3,
+        income: 67,
+        flavor: "A tiny frog with pointy elf ears. Hops through the snow dropping cash.",
+        img: null,
+      },
+      {
+        id: "cupcake-koala",
+        name: "Cupcake Koala",
+        sailingValue: 1,
+        income: 60,
+        flavor: "A koala that bakes cupcakes in its sleep. Sweet, fluffy, and worth every bite.",
+        img: null,
+      },
+    ],
+  },
+  {
+    id: "unknown-island",
+    name: "Unknown Island",
+    flavor: "A spooky fog-shrouded island where witch-fused brainrots wash ashore.",
+    rewards: [
+      {
+        id: "mummio-rappitto",
+        name: "Mummio Rappitto",
+        sailingValue: 5,
+        income: 325,
+        flavor: "A mummified rabbit that still hops. Ancient Egyptian brainrot energy.",
+        img: null,
+      },
+      {
+        id: "quackula",
+        name: "Quackula",
+        sailingValue: 3,
+        income: 1200,
+        flavor: "A vampire duck that quacks at midnight. Drains blood and prints money.",
+        img: null,
+      },
+      {
+        id: "jacko-spaventosa",
+        name: "Jacko Spaventosa",
+        sailingValue: 1,
+        income: 16200,
+        flavor: "A pumpkin-headed scarecrow. Spooky, scary, and surprisingly rich.",
+        img: null,
+      },
+      {
+        id: "tentacolo-tecnico",
+        name: "Tentacolo Tecnico",
+        sailingValue: 0.001,
+        income: 292500,
+        flavor: "A tech-savvy octopus from the deep. Its tentacles wire money directly to your account.",
+        img: null,
+      },
+    ],
+  },
+];
+
+const RAINBOW_CHANCE = 0.1;
+const RAINBOW_MULTIPLIER = 1.5;
+const RADIOACTIVE_CHANCE = 0.01;
+const RADIOACTIVE_MULTIPLIER = 3.5;
+const DIAMOND_CHANCE = 0.05;
+const DIAMOND_MULTIPLIER = 3.5;
+const SAILING_RAINBOW_CHANCE = 0.1;
+const SAILING_RADIOACTIVE_CHANCE = 0.001;
+const SAILING_DIAMOND_CHANCE = 0.005;
+const SAILING_EVENT_MUTATION_BONUS = 0.05;
+const MAX_REBIRTHS = 20;
+const AUTO_ROLL_SECONDS = 10;
+const EVENT_INTERVAL_SECONDS = 60 * 60;
+const EVENT_DURATION_MS = 5 * 60 * 1000;
+const SAVE_KEY_PREFIX = "brainrot-idle-save-v4";
+const ADMIN_PASSWORD = "Ab141130";
+const ADMIN_AUTH_KEY = "brainrot-admin-auth-until";
+const ADMIN_AUTH_DURATION_MS = 60 * 60 * 1000;
+const PLAYTIME_MILESTONES = [
+  { seconds: 60, label: "1 Minute", reward: { type: "money", amount: 50 } },
+  { seconds: 600, label: "10 Minutes", reward: { type: "money", amount: 500 } },
+  { seconds: 900, label: "15 Minutes", reward: { type: "money", amount: 5000 } },
+  { seconds: 1800, label: "30 Minutes", reward: { type: "brainrot", minRarity: "mythic" } },
+  { seconds: 3600, label: "1 Hour", reward: { type: "brainrot", minRarity: "secret" } },
+  { seconds: 10800, label: "3 Hours", reward: { type: "brainrot", minRarity: "celestial" } },
+];
+
+const MUTATIONS = {
+  normal: {
+    label: "NORMAL",
+    multiplier: 1,
+    countKey: "normalCount",
+    className: "normal",
+  },
+  rainbow: {
+    label: "RAINBOW",
+    multiplier: RAINBOW_MULTIPLIER,
+    countKey: "rainbowCount",
+    className: "rainbow",
+  },
+  radioactive: {
+    label: "RADIOACTIVE",
+    multiplier: RADIOACTIVE_MULTIPLIER,
+    countKey: "radioactiveCount",
+    className: "radioactive",
+  },
+  diamond: {
+    label: "DIAMOND",
+    multiplier: DIAMOND_MULTIPLIER,
+    countKey: "diamondCount",
+    className: "diamond",
+  },
+};
+
+const EVENT_MUTATION_WEIGHTS = {
+  rainbow: 4,
+  radioactive: 1,
+  diamond: 2,
+};
+
+// ----- Precomputed lookup maps -----
+
+const characterById = Object.fromEntries(characters.map((c) => [c.id, c]));
+const totalCharacterValue = characters.reduce((t, c) => t + c.value, 0);
+const luckyBlockCharacterById = Object.fromEntries(luckyBlockCharacters.map((c) => [c.id, c]));
+const adminOnlyCharacterById = Object.fromEntries(adminOnlyCharacters.map((c) => [c.id, c]));
+const sailingIslandById = Object.fromEntries(sailingIslands.map((i) => [i.id, i]));
+const sailingBoatById = Object.fromEntries(sailingBoats.map((b) => [b.id, b]));
+
+// Build sailing reward characters (with letter-image SVGs filled in)
+const sailingRewardCharacters = sailingIslands.flatMap((island) =>
+  island.rewards.map((reward) => ({
+    ...reward,
+    value: reward.sailingValue,
+    islandId: island.id,
+    islandName: island.name,
+    flavor: reward.flavor || `${reward.name} is a sailing reward from ${island.name}.`,
+    isSailingReward: true,
+  })),
+);
+const sailingRewardCharacterById = Object.fromEntries(
+  sailingRewardCharacters.map((c) => [c.id, c]),
+);
+
+const defaultLuckyBlockIds = luckyBlockCharacters
+  .filter((c) => !c.luckyBlockOnly)
+  .map((c) => c.id);
+
+// ----- Expose on window -----
+
+window.GameData = {
+  characters,
+  luckyBlockCharacters,
+  adminOnlyCharacters,
+  sailingBoats,
+  sailingIslands,
+  characterById,
+  totalCharacterValue,
+  luckyBlockCharacterById,
+  adminOnlyCharacterById,
+  sailingIslandById,
+  sailingBoatById,
+  sailingRewardCharacters,
+  sailingRewardCharacterById,
+  defaultLuckyBlockIds,
+  MUTATIONS,
+  EVENT_MUTATION_WEIGHTS,
+  CONST: {
+    SAILING_DURATION_MS,
+    MAX_SAILS_PER_TRIP,
+    SAILING_BOAT_IMAGE,
+    RAINBOW_CHANCE,
+    RAINBOW_MULTIPLIER,
+    RADIOACTIVE_CHANCE,
+    RADIOACTIVE_MULTIPLIER,
+    DIAMOND_CHANCE,
+    DIAMOND_MULTIPLIER,
+    SAILING_RAINBOW_CHANCE,
+    SAILING_RADIOACTIVE_CHANCE,
+    SAILING_DIAMOND_CHANCE,
+    SAILING_EVENT_MUTATION_BONUS,
+    MAX_REBIRTHS,
+    AUTO_ROLL_SECONDS,
+    EVENT_INTERVAL_SECONDS,
+    EVENT_DURATION_MS,
+    SAVE_KEY_PREFIX,
+    ADMIN_PASSWORD,
+    ADMIN_AUTH_KEY,
+    ADMIN_AUTH_DURATION_MS,
+    PLAYTIME_MILESTONES,
+  },
+};

@@ -1,319 +1,209 @@
-window.BRAINROT_PAGE = "admin";
-window.BrainrotModules = window.BrainrotModules || {};
+/* ================================================================
+   admin.js — Admin panel: auth, spawn, set money/rebirth/event
+   ================================================================ */
 
-window.BrainrotModules.admin = (() => {
+window.Admin = (() => {
+  const D = () => window.GameData;
+  const U = () => window.GameUtils;
+  const S = () => window.GameState;
+  const UI = () => window.GameUI;
+  const G = () => window.Game;
   let bound = false;
 
-  function setAdminStatus(message) {
-    const { dom } = window.BrainrotCore;
-    if (dom.adminStatusText) {
-      dom.adminStatusText.textContent = message;
-    }
-  }
+  /* ---------- Helpers ---------- */
 
-  function setAdminSpawnerStatus(message) {
-    const { dom } = window.BrainrotCore;
-    if (dom.adminSpawnerStatusText) {
-      dom.adminSpawnerStatusText.textContent = message;
-    }
-  }
-
-  function getAdminSpawnables() {
-    const api = window.BrainrotCore;
+  function getSpawnables() {
     const combined = [
-      ...api.characters,
-      ...api.luckyBlockCharacters,
-      ...api.sailingRewardCharacters,
-      ...api.adminOnlyCharacters,
+      ...D().characters,
+      ...D().luckyBlockCharacters,
+      ...D().sailingRewardCharacters,
+      ...D().adminOnlyCharacters,
     ];
-    const uniqueEntries = combined.filter(
-      (entry, index, array) => array.findIndex((item) => item.id === entry.id) === index,
-    );
-
-    return uniqueEntries.sort((left, right) => {
-      if (left.adminOnly && !right.adminOnly) {
-        return -1;
+    const seen = new Set();
+    const unique = [];
+    for (const entry of combined) {
+      if (!seen.has(entry.id)) {
+        seen.add(entry.id);
+        unique.push(entry);
       }
-
-      if (!left.adminOnly && right.adminOnly) {
-        return 1;
-      }
-
-      return left.name.localeCompare(right.name);
+    }
+    return unique.sort((a, b) => {
+      if (a.adminOnly && !b.adminOnly) return -1;
+      if (!a.adminOnly && b.adminOnly) return 1;
+      return a.name.localeCompare(b.name);
     });
   }
 
-  function renderBrainrotOptions() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!dom.adminBrainrotSelect) {
-      return;
-    }
-
-    const previousValue = dom.adminBrainrotSelect.value;
-    const spawnables = getAdminSpawnables();
-
-    dom.adminBrainrotSelect.innerHTML = spawnables
-      .map((entry) => `<option value="${entry.id}">${entry.name}</option>`)
-      .join("");
-
-    const hasPreviousValue = spawnables.some((entry) => entry.id === previousValue);
-    if (hasPreviousValue) {
-      dom.adminBrainrotSelect.value = previousValue;
-      return;
-    }
-
-    const defaultAdminOnly = api.adminOnlyCharacters[0]?.id;
-    dom.adminBrainrotSelect.value = defaultAdminOnly || spawnables[0]?.id || "";
+  function setStatus(msg) {
+    const d = UI().dom;
+    if (d.adminStatusText) d.adminStatusText.textContent = msg;
   }
 
-  function renderMutationOptions() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!dom.adminMutationSelect) {
-      return;
-    }
-
-    dom.adminMutationSelect.innerHTML = Object.entries(api.MUTATIONS)
-      .map(([id, mutation], index) => `<option value="${id}">${index + 1} ${mutation.label}</option>`)
-      .join("");
+  function setSpawnerStatus(msg) {
+    const d = UI().dom;
+    if (d.adminSpawnerStatusText) d.adminSpawnerStatusText.textContent = msg;
   }
 
-  function renderEventOptions() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!dom.adminEventSelect) {
+  /* ---------- Render ---------- */
+
+  function render() {
+    var d = UI().dom;
+    if (!d.adminPage) return;
+
+    S().setAdminAuthorized(S().loadAdminAuthorization());
+    if (d.adminAuthButton) d.adminAuthButton.classList.remove("hidden");
+    renderView();
+
+    if (!S().getAdminAuthorized()) {
+      setStatus("Enter the admin password to unlock tools.");
       return;
     }
 
-    dom.adminEventSelect.innerHTML = Object.entries(api.EVENT_MUTATION_WEIGHTS)
-      .map(([id]) => `<option value="${id}">${api.getMutationDisplayName(id)}</option>`)
-      .join("");
+    // Populate selects
+    const spawnables = getSpawnables();
+    if (d.adminBrainrotSelect) {
+      const prev = d.adminBrainrotSelect.value;
+      d.adminBrainrotSelect.innerHTML = spawnables.map((e) => `<option value="${e.id}">${e.name}</option>`).join("");
+      if (spawnables.some((e) => e.id === prev)) d.adminBrainrotSelect.value = prev;
+      else d.adminBrainrotSelect.value = D().adminOnlyCharacters[0]?.id || spawnables[0]?.id || "";
+    }
+
+    if (d.adminMutationSelect) {
+      d.adminMutationSelect.innerHTML = Object.entries(D().MUTATIONS)
+        .map(([id, mut], i) => `<option value="${id}">${i + 1} ${mut.label}</option>`).join("");
+    }
+
+    if (d.adminEventSelect) {
+      d.adminEventSelect.innerHTML = Object.entries(D().EVENT_MUTATION_WEIGHTS)
+        .map(([id]) => `<option value="${id}">${U().getMutationDisplayName(id)}</option>`).join("");
+    }
+
+    const st = S().getState();
+    if (d.adminSetMoneyInput) d.adminSetMoneyInput.value = `${Math.floor(st.money * 100) / 100}`;
+    if (d.adminSetRebirthInput) d.adminSetRebirthInput.value = `${st.rebirthCount}`;
+    if (d.adminMutationSelect) d.adminMutationSelect.value = d.adminMutationSelect.value || "normal";
+    if (d.adminEventSelect) d.adminEventSelect.value = st.event.activeMutation || "rainbow";
   }
 
   function renderView() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!api.canCurrentAccountUseAdmin()) {
-      dom.adminAuthView.classList.remove("hidden");
-      dom.adminSpawnerView.classList.add("hidden");
-      return;
-    }
-
-    dom.adminAuthView.classList.toggle("hidden", api.getAdminAuthorized());
-    dom.adminSpawnerView.classList.toggle("hidden", !api.getAdminAuthorized());
+    const d = UI().dom;
+    const authed = S().getAdminAuthorized();
+    if (d.adminAuthView) d.adminAuthView.classList.toggle("hidden", authed);
+    if (d.adminSpawnerView) d.adminSpawnerView.classList.toggle("hidden", !authed);
   }
 
-  function render() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
+  /* ---------- Actions ---------- */
 
-    if (!api.canCurrentAccountUseAdmin()) {
-      api.setAdminAuthorized(false);
-      api.saveAdminAuthorization(false);
-      renderView();
-      dom.adminAuthButton?.classList.add("hidden");
-      setAdminStatus("Only whitelisted users can use admin tools.");
-      return;
-    }
-
-    api.setAdminAuthorized(api.loadAdminAuthorization());
-    dom.adminAuthButton?.classList.remove("hidden");
-    renderView();
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("This whitelist user still needs admin auth.");
-      return;
-    }
-
-    renderBrainrotOptions();
-    renderMutationOptions();
-    renderEventOptions();
-    dom.adminSetMoneyInput.value = `${Math.floor(api.getState().money * 100) / 100}`;
-    dom.adminSetRebirthInput.value = `${api.getState().rebirthCount}`;
-    if (dom.adminMutationSelect) {
-      dom.adminMutationSelect.value = dom.adminMutationSelect.value || "normal";
-    }
-    if (dom.adminEventSelect) {
-      dom.adminEventSelect.value = api.getState().event.activeMutation || "rainbow";
-    }
-  }
-
-  function submitAdminPassword() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-
-    if (!api.canCurrentAccountUseAdmin()) {
-      api.setAdminAuthorized(false);
-      api.saveAdminAuthorization(false);
+  function submitPassword() {
+    const d = UI().dom;
+    if (d.adminPasswordInput.value === D().CONST.ADMIN_PASSWORD) {
+      S().setAdminAuthorized(true);
+      S().saveAdminAuthorization(true);
       render();
-      setAdminStatus("Only whitelisted users can use admin tools.");
-      return;
-    }
-
-    if (api.canCurrentAccountBypassAdminPassword()) {
-      api.setAdminAuthorized(true);
+      setSpawnerStatus("Admin unlocked. Choose mutation, brainrot, and amount.");
+    } else {
+      S().setAdminAuthorized(false);
+      S().saveAdminAuthorization(false);
       render();
-      setAdminSpawnerStatus("Admin unlocked for ADMIN_BAUBER.");
-      return;
+      setStatus("Wrong password.");
     }
-
-    if (dom.adminPasswordInput.value === api.constants.ADMIN_PASSWORD) {
-      api.setAdminAuthorized(true);
-      api.saveAdminAuthorization(true);
-      render();
-      setAdminSpawnerStatus("Admin unlocked. Choose mutation, brainrot, and amount.");
-      return;
-    }
-
-    api.setAdminAuthorized(false);
-    api.saveAdminAuthorization(false);
-    render();
-    setAdminStatus("Wrong password.");
   }
 
-  function adminSpawnBrainrots() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("Please enter your password.");
+  function spawnBrainrots() {
+    const d = UI().dom;
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+
+    const mutation = d.adminMutationSelect.value;
+    const characterId = d.adminBrainrotSelect.value;
+    const amount = Math.max(1, Math.min(1e18, Number(d.adminAmountInput.value) || 1));
+    const ch = U().getOwnedCharacterData(characterId);
+
+    if (!characterId || !U().isKnownCharacterId(characterId)) {
+      setSpawnerStatus("Choose a valid brainrot first.");
       return;
     }
 
-    const mutation = dom.adminMutationSelect.value;
-    const characterId = dom.adminBrainrotSelect.value;
-    const amount = Math.max(1, Math.min(1e18, Number(dom.adminAmountInput.value) || 1));
-    const character = api.getOwnedCharacterData(characterId);
-
-    if (!characterId || !api.isKnownCharacterId(characterId)) {
-      setAdminSpawnerStatus("Choose a valid brainrot first.");
-      return;
-    }
-
-    api.grantOwnedCharacter(characterId, mutation, amount);
-    api.setSelectedOwnedCharacterId(characterId);
-    api.render();
-    setAdminSpawnerStatus(
-      `Spawned ${amount} ${api.getMutationDisplayName(mutation).toLowerCase()} ${character.name} into your collection.`,
-    );
+    G().grantOwnedCharacter(characterId, mutation, amount);
+    G().setSelectedOwnedCharacterId(characterId);
+    G().fullRender();
+    setSpawnerStatus(`Spawned ${amount} ${U().getMutationDisplayName(mutation).toLowerCase()} ${ch.name} into your collection.`);
   }
 
-  function adminSetMoney() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("Please enter your password.");
-      return;
-    }
-
-    const nextMoney = Number.parseFloat(dom.adminSetMoneyInput.value);
-    if (Number.isNaN(nextMoney)) {
-      setAdminSpawnerStatus("Enter a valid money number.");
-      return;
-    }
-
-    api.getState().money = Math.max(0, nextMoney);
-    api.render();
-    setAdminSpawnerStatus(`Money set to ${api.formatMoney(api.getState().money)}.`);
+  function setMoney() {
+    const d = UI().dom;
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+    const v = Number.parseFloat(d.adminSetMoneyInput.value);
+    if (Number.isNaN(v)) { setSpawnerStatus("Enter a valid money number."); return; }
+    S().getState().money = Math.max(0, v);
+    G().fullRender();
+    setSpawnerStatus(`Money set to ${U().formatMoney(S().getState().money)}.`);
   }
 
-  function adminSetRebirth() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("Please enter your password.");
-      return;
-    }
-
-    const nextRebirth = Number.parseInt(dom.adminSetRebirthInput.value, 10);
-    if (Number.isNaN(nextRebirth)) {
-      setAdminSpawnerStatus("Enter a valid rebirth number.");
-      return;
-    }
-
-    api.getState().rebirthCount = Math.max(0, Math.min(api.constants.MAX_REBIRTHS, nextRebirth));
-    api.render();
-    setAdminSpawnerStatus(`Rebirth set to ${api.getState().rebirthCount}.`);
+  function setRebirth() {
+    const d = UI().dom;
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+    const v = Number.parseInt(d.adminSetRebirthInput.value, 10);
+    if (Number.isNaN(v)) { setSpawnerStatus("Enter a valid rebirth number."); return; }
+    S().getState().rebirthCount = Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, v));
+    G().fullRender();
+    setSpawnerStatus(`Rebirth set to ${S().getState().rebirthCount}.`);
   }
 
-  function adminSetEvent() {
-    const api = window.BrainrotCore;
-    const { dom } = api;
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("Please enter your password.");
-      return;
-    }
-
-    if (!dom.adminEventSelect) {
-      setAdminSpawnerStatus("Refresh the page to load the event controls.");
-      return;
-    }
-
-    const selectedEvent = dom.adminEventSelect.value;
-    if (!api.EVENT_MUTATION_WEIGHTS[selectedEvent]) {
-      setAdminSpawnerStatus("Choose a valid event.");
-      return;
-    }
-
-    api.getState().event.activeMutation = selectedEvent;
-    api.getState().event.endsAt = Date.now() + api.constants.EVENT_DURATION_MS;
-    api.getState().event.playSeconds = 0;
-    api.render();
-    setAdminSpawnerStatus(`${api.getMutationDisplayName(selectedEvent)} event turned on for 5 minutes.`);
+  function setEvent() {
+    const d = UI().dom;
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+    const selected = d.adminEventSelect?.value;
+    if (!selected || !D().EVENT_MUTATION_WEIGHTS[selected]) { setSpawnerStatus("Choose a valid event."); return; }
+    const st = S().getState();
+    st.event.activeMutation = selected;
+    st.event.endsAt = Date.now() + D().CONST.EVENT_DURATION_MS;
+    st.event.playSeconds = 0;
+    G().fullRender();
+    setSpawnerStatus(`${U().getMutationDisplayName(selected)} event turned on for 5 minutes.`);
   }
 
-  function adminClearEvent() {
-    const api = window.BrainrotCore;
-    if (!api.getAdminAuthorized()) {
-      setAdminStatus("Please enter your password.");
-      return;
-    }
-
-    api.getState().event.activeMutation = null;
-    api.getState().event.endsAt = 0;
-    api.getState().event.playSeconds = 0;
-    api.render();
-    setAdminSpawnerStatus("Event turned off.");
+  function clearEvent() {
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+    const st = S().getState();
+    st.event.activeMutation = null;
+    st.event.endsAt = 0;
+    st.event.playSeconds = 0;
+    G().fullRender();
+    setSpawnerStatus("Event turned off.");
   }
+
+  function spawnAllBrainrots() {
+    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
+    var allChars = D().characters;
+    var count = 0;
+    for (var i = 0; i < allChars.length; i++) {
+      G().grantOwnedCharacter(allChars[i].id, "normal", 1);
+      count++;
+    }
+    G().fullRender();
+    setSpawnerStatus("Spawned 1 of each brainrot — " + count + " total added to your collection.");
+  }
+
+  /* ---------- Bind & boot ---------- */
 
   function bind() {
-    if (bound) {
-      return;
-    }
-
-    const api = window.BrainrotCore;
-    const { dom } = api;
-
-    api.bindClick(dom.adminPasswordSubmitButton, submitAdminPassword);
-    api.bindClick(dom.adminConfirmButton, adminSpawnBrainrots);
-    api.bindClick(dom.adminSetMoneyButton, adminSetMoney);
-    api.bindClick(dom.adminSetRebirthButton, adminSetRebirth);
-    api.bindClick(dom.adminSetEventButton, adminSetEvent);
-    api.bindClick(dom.adminClearEventButton, adminClearEvent);
-
-    if (dom.adminPasswordInput) {
-      dom.adminPasswordInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          submitAdminPassword();
-        }
-      });
-    }
-
+    if (bound) return;
+    const d = UI().dom;
+    UI().bindClick(d.adminPasswordSubmitButton, submitPassword);
+    UI().bindClick(d.adminConfirmButton, spawnBrainrots);
+    UI().bindClick(d.adminSpawnAllButton, spawnAllBrainrots);
+    UI().bindClick(d.adminSetMoneyButton, setMoney);
+    UI().bindClick(d.adminSetRebirthButton, setRebirth);
+    UI().bindClick(d.adminSetEventButton, setEvent);
+    UI().bindClick(d.adminClearEventButton, clearEvent);
+    d.adminPasswordInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") submitPassword(); });
     bound = true;
   }
 
   function boot() {
-    const api = window.BrainrotCore;
-    api.applyCurrentPageView();
     bind();
     render();
   }
 
-  return {
-    boot,
-    render,
-  };
+  return { boot, render };
 })();
-
-window.PAGE_BOOT = function pageBootAdmin() {
-  window.BrainrotModules.admin.boot();
-};

@@ -5,15 +5,14 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Tuple
 
-
-WEB_ROOT = Path(__file__).parent / "web"
+PROJECT_ROOT = Path(__file__).parent
 
 
 class QuietGameRequestHandler(SimpleHTTPRequestHandler):
-    # Suppress default request logging so detached/background runs do not break
-    # when stdout/stderr are no longer attached to the original terminal.
+    """Serve static files. Single-page app, so only index.html is routed."""
+
     def log_message(self, format: str, *args) -> None:
-        return
+        return  # suppress log noise for background/detached runs
 
     def end_headers(self) -> None:
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -22,17 +21,10 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self) -> None:
-        route_map = {
-            "/": "/html/home.html",
-            "/admin": "/html/admin.html",
-            "/rebirth": "/html/rebirth.html",
-            "/sailing": "/html/sailing.html",
-            "/accountmanagement": "/html/accountmanagement.html",
-        }
-
-        if self.path in route_map:
-            self.path = route_map[self.path]
-
+        # Map the bare root to index.html (SimpleHTTPRequestHandler lists
+        # directories otherwise).
+        if self.path == "/":
+            self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -47,7 +39,6 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
             "activeRainbowId": None,
         }
         response = json.dumps(payload).encode("utf-8")
-
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(response)))
@@ -56,15 +47,13 @@ class QuietGameRequestHandler(SimpleHTTPRequestHandler):
 
 
 def create_server(host: str, start_port: int, attempts: int = 20) -> Tuple[ThreadingHTTPServer, int]:
-    handler = partial(QuietGameRequestHandler, directory=str(WEB_ROOT))
-
+    handler = partial(QuietGameRequestHandler, directory=str(PROJECT_ROOT))
     for port in range(start_port, start_port + attempts):
         try:
             server = ThreadingHTTPServer((host, port), handler)
             return server, port
         except OSError:
             continue
-
     raise OSError(f"Could not bind a local port in range {start_port}-{start_port + attempts - 1}")
 
 
@@ -95,4 +84,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-#trying if Ipad works
+#https://stealabrainrot.fandom.com/wiki/Noobini_Pizzanini?file=Noobini_Pizzanini.png
