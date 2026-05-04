@@ -118,16 +118,30 @@ function fillCharacterImages() {
 
 /* ---------- Rarity ---------- */
 
-function getRarityLabel(value, percent) {
+function getRarityLabel(value, percent, tierName) {
+  if (tierName) {
+    var map = {
+      og: { text: "OG", className: "og" },
+      divine: { text: "DIVINE", className: "divine" },
+      celestial: { text: "CELESTIAL", className: "celestial" },
+      secret: { text: "SECRET", className: "secret" },
+      mythic: { text: "MYTHIC", className: "mythic" },
+      god: { text: "GOD", className: "god" },
+      epic: { text: "EPIC", className: "epic" },
+      uncommon: { text: "UNCOMMON", className: "uncommon" },
+      common: { text: "COMMON", className: "common" },
+    };
+    return map[tierName] || map.common;
+  }
   var pct = percent !== undefined ? percent : (value / D().totalCharacterValue) * 100;
   if (pct < 0.008) return { text: "OG", className: "og" };
   if (pct < 0.04)  return { text: "DIVINE", className: "divine" };
   if (pct < 0.12) return { text: "CELESTIAL", className: "celestial" };
   if (pct < 0.35) return { text: "SECRET", className: "secret" };
-  if (pct < 1.2)  return { text: "MYTHIC", className: "mythic" };
-  if (pct < 2.5)  return { text: "GOD", className: "god" };
-  if (pct < 5.0)  return { text: "EPIC", className: "epic" };
-  if (pct < 8.0)  return { text: "UNCOMMON", className: "uncommon" };
+  if (pct < 0.8)  return { text: "MYTHIC", className: "mythic" };
+  if (pct < 1.8)  return { text: "GOD", className: "god" };
+  if (pct < 3.5)  return { text: "EPIC", className: "epic" };
+  if (pct < 6.5)  return { text: "UNCOMMON", className: "uncommon" };
   return { text: "COMMON", className: "common" };
 }
 
@@ -234,37 +248,30 @@ function isCutoutCharacterImage(character) {
 }
 
 function getOwnedCharacterData(characterId) {
-  const d = D();
+  var d = D();
   if (d.characterById[characterId]) return d.characterById[characterId];
-
   if (d.luckyBlockCharacterById[characterId]) {
-    const lc = d.luckyBlockCharacterById[characterId];
+    var lc = d.luckyBlockCharacterById[characterId];
     return {
       id: lc.id, name: lc.name, value: lc.luckyBlockValue, cost: 0,
-      income: lc.income || 0, img: lc.img,
+      income: lc.income || 0, img: lc.img, tier: "mythic",
       flavor: lc.luckyBlockOnly
         ? "Lucky block special brainrot. It only appears from the lucky block pool."
         : "Standard lucky block pick. Its spawn chance is based on lucky block value.",
       isLuckyBlockReward: true,
     };
   }
-
   if (d.adminOnlyCharacterById[characterId]) return d.adminOnlyCharacterById[characterId];
-
   if (d.sailingRewardCharacterById[characterId]) {
-    const sc = d.sailingRewardCharacterById[characterId];
+    var sc = d.sailingRewardCharacterById[characterId];
     return {
       id: sc.id, name: sc.name, value: sc.value ?? sc.sailingValue ?? 0,
-      cost: Number(sc.cost) || 0, income: Number(sc.income) || 0,
-      flavor: sc.flavor || `${sc.name} is a sailing reward from ${sc.islandName || "the harbor"}.`,
+      cost: Number(sc.cost) || 0, income: Number(sc.income) || 0, tier: "god",
+      flavor: sc.flavor || (sc.name + " is a sailing reward from " + (sc.islandName || "the harbor") + "."),
       img: sc.img || "", isSailingReward: true,
     };
   }
-
-  return {
-    id: characterId, name: characterId, value: 0, cost: 0, income: 0,
-    flavor: "Unknown brainrot reward.", img: "", isLuckyBlockReward: true,
-  };
+  return { id: characterId, name: characterId, value: 0, cost: 0, income: 0, tier: "common", flavor: "Unknown brainrot reward.", img: "", isLuckyBlockReward: true };
 }
 
 function isKnownCharacterId(characterId) {

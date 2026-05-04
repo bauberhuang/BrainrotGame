@@ -23,7 +23,7 @@ function cacheDom() {
     "rollTimerDisplay",
     "eventTimerCard", "eventTimerLabel", "eventTimerDisplay",
     "spriteImage", "spriteFrame", "traitTag", "rollChanceDisplay",
-    "ownedList", "ownedViewerPanel", "ownedViewerType", "ownedViewerImage", "ownedViewerName", "ownedViewerRarity", "ownedViewerFlavor", "ownedViewerCost", "ownedViewerIncome",
+    "ownedList",
     "statusText", "buyButton", "rollButton",
     "luckyBlockInventoryDisplay", "uncoverLuckyBlockButton", "uncoverAllLuckyBlocksButton",
     "adminAuthView", "adminSpawnerView",
@@ -107,7 +107,7 @@ function renderCurrentRoll() {
   if (!character) return;
 
   const income = getUnitIncomeForRoll(roll);
-  const rarity = U().getRarityLabel(character.value, U().getPercentNumberFromValue(character.value));
+  const rarity = U().getRarityLabel(character.value, U().getPercentNumberFromValue(character.value), character.tier);
   const mutationCfg = U().getMutationConfig(roll.mutation);
 
   if (dom.characterName) dom.characterName.textContent = character.name;
@@ -193,65 +193,68 @@ function renderOwned(selectedOwnedCharacterId) {
   var entries = Object.values(st.owned).sort(function (a, b) {
     return U().getOwnedCharacterData(b.id).value - U().getOwnedCharacterData(a.id).value;
   });
-  try {
-    if (!dom.ownedList) return;
-    if (entries.length === 0) {
-      dom.ownedList.innerHTML = '<div class="empty-state">No brainrots owned yet. Roll something cursed and buy it.</div>';
-      return;
-    }
-    var cashMult = U().getCashMultiplierForRebirthCount(st.rebirthCount);
-    var RAINBOW = D().CONST.RAINBOW_MULTIPLIER;
-    var RADIOACTIVE = D().CONST.RADIOACTIVE_MULTIPLIER;
-    var DIAMOND = D().CONST.DIAMOND_MULTIPLIER;
-    var defaultIds = D().defaultLuckyBlockIds;
-    var cards = [];
-    for (var i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      var ch = U().getOwnedCharacterData(entry.id);
-      var isLB = U().isLuckyBlockRewardCharacter(entry.id);
-      var rarity = U().getRarityLabel(
-        ch.value,
-        isLB ? U().getLuckyBlockPercentNumber(D().luckyBlockCharacterById[entry.id], defaultIds)
-             : U().getPercentNumberFromValue(ch.value));
-      var income = (entry.normalCount * ch.income
-        + entry.rainbowCount * ch.income * RAINBOW
-        + entry.radioactiveCount * ch.income * RADIOACTIVE
-        + (entry.diamondCount || 0) * ch.income * DIAMOND) * cashMult;
-      var baseIncome = ch.income * cashMult;
-      var sel = selectedOwnedCharacterId === entry.id;
-      cards.push(
-        '<article onclick="window.Game.selectOwnedCard(this)" class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + entry.id + '">',
-        '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + '" src="' + (ch.img || '') + '" alt="' + ch.name + '" />',
-        '<div><p class="owned-name">' + ch.name + '</p>',
-        '<p class="owned-meta">' + rarity.text + ' &middot; N' + entry.normalCount + ' R' + entry.rainbowCount + ' Rd' + entry.radioactiveCount + ' D' + (entry.diamondCount || 0) + '</p>',
-        '<p class="owned-meta">' + U().formatMoney(baseIncome) + '/s each &middot; Total ' + U().formatMoney(income) + '/s</p></div>',
-        '</article>');
-    }
-    dom.ownedList.innerHTML = cards.join('');
-  } catch (e) {
-    dom.ownedList.innerHTML = '<div class="empty-state">Error rendering collection. Check console.</div>';
+  if (!dom.ownedList) return;
+  if (entries.length === 0) {
+    dom.ownedList.innerHTML = '<div class="empty-state">No brainrots owned yet. Roll something cursed and buy it.</div>';
+    return;
   }
+  var cashMult = U().getCashMultiplierForRebirthCount(st.rebirthCount);
+  var RAINBOW = D().CONST.RAINBOW_MULTIPLIER;
+  var RADIOACTIVE = D().CONST.RADIOACTIVE_MULTIPLIER;
+  var DIAMOND = D().CONST.DIAMOND_MULTIPLIER;
+  var defaultIds = D().defaultLuckyBlockIds;
+  var cards = [];
+  for (var i = 0; i < entries.length; i++) {
+    var entry = entries[i];
+    var ch = U().getOwnedCharacterData(entry.id);
+    var isLB = U().isLuckyBlockRewardCharacter(entry.id);
+    var rarity = U().getRarityLabel(
+      ch.value,
+      isLB ? U().getLuckyBlockPercentNumber(D().luckyBlockCharacterById[entry.id], defaultIds)
+           : U().getPercentNumberFromValue(ch.value), ch.tier);
+    var income = (entry.normalCount * ch.income
+      + entry.rainbowCount * ch.income * RAINBOW
+      + entry.radioactiveCount * ch.income * RADIOACTIVE
+      + (entry.diamondCount || 0) * ch.income * DIAMOND) * cashMult;
+    var baseIncome = ch.income * cashMult;
+    var sel = selectedOwnedCharacterId === entry.id;
+    cards.push(
+      '<article onclick="window.Game.selectOwnedCard(this)" class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + entry.id + '">',
+      '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + '" src="' + (ch.img || '') + '" alt="" />',
+      '<div><p class="owned-name">' + ch.name + '</p>',
+      '<p class="owned-meta">' + rarity.text + '</p>' +
+      (entry.normalCount > 0 || entry.rainbowCount > 0 || entry.radioactiveCount > 0 || entry.diamondCount > 0 ?
+        '<p class="owned-meta">' +
+        (entry.normalCount > 0 ? 'Normal ' + entry.normalCount + ' ' : '') +
+        (entry.rainbowCount > 0 ? 'Rainbow ' + entry.rainbowCount + ' ' : '') +
+        (entry.radioactiveCount > 0 ? 'Radioactive ' + entry.radioactiveCount + ' ' : '') +
+        (entry.diamondCount > 0 ? 'Diamond ' + entry.diamondCount : '') +
+        '</p>' : ''),
+      '<p class="owned-meta">' + U().formatMoney(baseIncome) + '/s each &middot; Total ' + U().formatMoney(income) + '/s</p></div>',
+      '</article>');
+    // Insert viewer right after the selected card
+    if (sel) {
+      var vch = ch, vlb = isLB, vrarity = rarity, vinc = vch.income * cashMult;
+      cards.push(
+        '<div class="viewer-panel" style="grid-column:1/-1;margin:0 0 12px 0;padding:18px;border:1px solid rgba(38,20,10,0.12);border-radius:20px;background:rgba(255,255,255,0.8);">',
+        '<div class="panel-title-row"><h2>View Brainrot</h2></div>',
+        '<article class="sprite-card compact-viewer" style="display:flex;gap:18px;margin-top:12px;">',
+        '<div class="sprite-frame" style="flex:0 0 160px;"><img src="' + (vch.img || '') + '" alt="" style="width:100%;border-radius:18px;" /></div>',
+        '<div class="sprite-copy" style="flex:1;">',
+        '<h3>' + vch.name + '</h3>',
+        '<span class="rarity-tag ' + vrarity.className + '">' + vrarity.text + '</span>',
+        '<p class="flavor">' + (vch.flavor || '') + '</p>',
+        '<p><span>Cost:</span> <strong>' + U().formatMoney(vch.cost) + '</strong> &middot; <span>Money/s:</span> <strong>' + U().formatMoney(vinc) + '/s</strong></p>',
+        '</div>',
+        '</article>',
+        '</div>');
+    }
+  }
+  dom.ownedList.innerHTML = cards.join('');
 }
 
 function renderOwnedViewer(selectedOwnedCharacterId) {
-  var panel = dom.ownedViewerPanel;
-  if (!panel) return;
-  var st = S().getState();
-  if (!selectedOwnedCharacterId || !st.owned[selectedOwnedCharacterId]) { panel.classList.add('hidden'); return; }
-  var ch = U().getOwnedCharacterData(selectedOwnedCharacterId);
-  var isLB = U().isLuckyBlockRewardCharacter(selectedOwnedCharacterId);
-  var rarity = U().getRarityLabel(
-    ch.value,
-    isLB ? U().getLuckyBlockPercentNumber(D().luckyBlockCharacterById[selectedOwnedCharacterId], D().defaultLuckyBlockIds)
-         : U().getPercentNumberFromValue(ch.value));
-  var income = ch.income * U().getCashMultiplierForRebirthCount(st.rebirthCount);
-  panel.classList.remove('hidden');
-  if (dom.ownedViewerImage) { dom.ownedViewerImage.src = ch.img || ''; dom.ownedViewerImage.alt = ch.name; dom.ownedViewerImage.className = U().isCutoutCharacterImage(ch) ? 'cutout-image' : ''; }
-  if (dom.ownedViewerName) dom.ownedViewerName.textContent = ch.name;
-  if (dom.ownedViewerRarity) { dom.ownedViewerRarity.textContent = rarity.text; dom.ownedViewerRarity.className = 'rarity-tag ' + rarity.className; }
-  if (dom.ownedViewerFlavor) dom.ownedViewerFlavor.textContent = ch.flavor || '';
-  if (dom.ownedViewerCost) dom.ownedViewerCost.textContent = U().formatMoney(ch.cost);
-  if (dom.ownedViewerIncome) dom.ownedViewerIncome.textContent = U().formatMoney(income) + '/s';
+  // Rendered inline in renderOwned
 }
 
 function fullRender(selectedOwnedCharacterId, autoRollRemaining) {
