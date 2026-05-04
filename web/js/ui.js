@@ -269,27 +269,7 @@ function fullRender(selectedOwnedCharacterId, autoRollRemaining) {
 }
 
 function renderPlaytimeRewards() {
-  try {
-    var st = S().getState();
-    var totalSec = st.totalPlaySeconds || 0;
-    if (dom.totalPlaytimeDisplay) {
-      var h = Math.floor(totalSec / 3600);
-      var m = Math.floor((totalSec % 3600) / 60);
-      var s = totalSec % 60;
-      dom.totalPlaytimeDisplay.textContent = h > 0 ? h + 'h ' + m + 'm' : m > 0 ? m + 'm ' + s + 's' : s + 's';
-    }
-    if (window.Game && window.Game.getReachedUnclaimedMilestones && dom.playtimeRewardCard && dom.playtimeRewardLabel && dom.playtimeRewardButton) {
-      var unclaimed = window.Game.getReachedUnclaimedMilestones();
-      if (unclaimed.length > 0) {
-        dom.playtimeRewardCard.classList.remove('hidden');
-        var next = unclaimed[0];
-        dom.playtimeRewardLabel.textContent = 'Milestone: ' + next.label + ' — ' + (next.reward.type === 'money' ? U().formatMoney(next.reward.amount) : next.reward.minRarity.toUpperCase() + ' brainrot');
-        dom.playtimeRewardButton.onclick = function () { window.Game.claimMilestone(next.seconds); };
-      } else {
-        dom.playtimeRewardCard.classList.add('hidden');
-      }
-    }
-  } catch (e) {}
+  // Milestone card is now managed directly in tickIncome
 }
 
 /* ---------- Event binding helper ---------- */

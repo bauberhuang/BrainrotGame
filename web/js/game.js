@@ -20,13 +20,17 @@ function setSelectedOwnedCharacterId(v) { selectedOwnedCharacterId = v; }
 /* ---------- Roll logic ---------- */
 
 function weightedRoll() {
-  const roll = Math.random() * D().totalCharacterValue;
-  let running = 0;
-  for (const ch of D().characters) {
-    running += ch.value;
-    if (roll <= running) return ch;
+  var st = S().getState();
+  var affordable = D().characters.filter(function (ch) { return st.money >= ch.cost; });
+  if (affordable.length === 0) affordable = D().characters;
+  var totalValue = affordable.reduce(function (t, ch) { return t + ch.value; }, 0);
+  var roll = Math.random() * totalValue;
+  var running = 0;
+  for (var i = 0; i < affordable.length; i++) {
+    running += affordable[i].value;
+    if (roll <= running) return affordable[i];
   }
-  return D().characters[D().characters.length - 1];
+  return affordable[affordable.length - 1];
 }
 
 function getMutationChance(mutation) {
@@ -401,14 +405,65 @@ function tickIncome() {
 
   st.totalPlaySeconds = (st.totalPlaySeconds || 0) + 1;
 
-  // Live update playtime display directly every tick
+  // Live update playtime display with countdown to next reward
   var pd = document.getElementById("totalPlaytimeDisplay");
+  var milestones = D().CONST.PLAYTIME_MILESTONES;
+  // Find the first unclaimed milestone
+  var claimedStr = localStorage.getItem("brainrot-claimed") || "";
+  var claimed = claimedStr ? claimedStr.split(",").map(Number) : [];
+  var nextIdx = -1;
+  for (var mi = 0; mi < milestones.length; mi++) {
+    if (claimed.indexOf(mi) === -1) { nextIdx = mi; break; }
+  }
   if (pd) {
     var ts = st.totalPlaySeconds;
-    var h = Math.floor(ts / 3600);
-    var m = Math.floor((ts % 3600) / 60);
-    var s = ts % 60;
-    pd.textContent = h > 0 ? h + "h " + m + "m" : m > 0 ? m + "m " + s + "s" : s + "s";
+    if (nextIdx >= 0 && nextIdx < milestones.length) {
+      var remaining = milestones[nextIdx].seconds - ts;
+      if (remaining > 0) {
+        var rm = Math.floor(remaining / 60);
+        var rs = remaining % 60;
+        pd.textContent = rm > 0 ? rm + "m " + rs + "s" : rs + "s";
+      } else {
+        pd.textContent = "Claim!";
+      }
+    } else {
+      pd.textContent = "All done!";
+    }
+  }
+
+  // Direct milestone check
+  if (nextIdx >= 0 && nextIdx < milestones.length && st.totalPlaySeconds >= milestones[nextIdx].seconds) {
+    var card = document.getElementById("playtimeRewardCard");
+    var label = document.getElementById("playtimeRewardLabel");
+    var btn = document.getElementById("playtimeRewardButton");
+    if (card && label && btn) {
+      card.classList.remove("hidden");
+      var m = milestones[nextIdx];
+      label.textContent = "Milestone: " + m.label + " — " + (m.reward.type === "money" ? U().formatMoney(m.reward.amount) : m.reward.minRarity.toUpperCase() + " brainrot");
+      btn.onclick = function() {
+        if (m.reward.type === "money") {
+          S().getState().money += m.reward.amount;
+          UI().setStatus("Playtime reward: " + U().formatMoney(m.reward.amount) + " for " + m.label + " played!");
+        } else {
+          var minRar = m.reward.minRarity;
+          var rOrder = ["og","divine","celestial","secret","mythic","god","epic","uncommon","common"];
+          var minI = rOrder.indexOf(minRar);
+          for (var att = 0; att < 1000; att++) {
+            var cand = weightedRoll();
+            var rar = U().getRarityLabel(cand.value, undefined, cand.tier).className;
+            if (rOrder.indexOf(rar) <= minI) {
+              grantOwnedCharacter(cand.id, "normal", 1);
+              UI().setStatus("Playtime reward: " + rar.toUpperCase() + " " + cand.name + " for " + m.label + "!");
+              break;
+            }
+          }
+        }
+        claimed.push(nextIdx);
+        localStorage.setItem("brainrot-claimed", claimed.join(","));
+        card.classList.add("hidden");
+        fullRender();
+      };
+    }
   }
 
   if (!st.event.activeMutation) {
@@ -435,53 +490,8 @@ function tickIncome() {
   S().saveState();
 }
 
-/* ---------- Playtime milestones ---------- */
 
-function getReachedUnclaimedMilestones() {
-  const st = S().getState();
-  const milestones = D().CONST.PLAYTIME_MILESTONES;
-  const claimed = st.claimedMilestones || {};
-  return milestones.filter(function (m) { return st.totalPlaySeconds >= m.seconds && !claimed[m.seconds]; });
-}
 
-function hasUnclaimedMilestone() {
-  return getReachedUnclaimedMilestones().length > 0;
-}
-
-function claimMilestone(milestoneSeconds) {
-  const st = S().getState();
-  const milestone = D().CONST.PLAYTIME_MILESTONES.find(function (m) { return m.seconds === milestoneSeconds; });
-  if (!milestone) return;
-  if ((st.claimedMilestones || {})[milestoneSeconds]) return;
-
-  if (milestone.reward.type === "money") {
-    st.money += milestone.reward.amount;
-    UI().setStatus("Playtime reward: " + U().formatMoney(milestone.reward.amount) + " for " + milestone.label + " played!");
-  } else if (milestone.reward.type === "brainrot") {
-    var minRarity = milestone.reward.minRarity;
-    var rarityOrder = ["og", "divine", "celestial", "secret", "mythic", "god", "epic", "uncommon", "common"];
-    var minIndex = rarityOrder.indexOf(minRarity);
-    var rewardChar = null;
-    var rarity = "common";
-    for (var attempt = 0; attempt < 1000; attempt++) {
-      var candidate = weightedRoll();
-      rarity = U().getRarityLabel(candidate.value).className;
-      var rarityIndex = rarityOrder.indexOf(rarity);
-      if (rarityIndex >= 0 && rarityIndex <= minIndex) {
-        rewardChar = candidate;
-        break;
-      }
-    }
-    if (rewardChar) {
-      grantOwnedCharacter(rewardChar.id, "normal", 1);
-      UI().setStatus("Playtime reward: Earned " + rarity.toUpperCase() + " " + rewardChar.name + " for " + milestone.label + "!");
-    }
-  }
-
-  if (!st.claimedMilestones) st.claimedMilestones = {};
-  st.claimedMilestones[milestoneSeconds] = true;
-  fullRender();
-}
 
 /* ---------- Expose on window ---------- */
 
@@ -524,7 +534,4 @@ window.Game = {
   // tick
   tickIncome,
   // playtime milestones
-  getReachedUnclaimedMilestones,
-  hasUnclaimedMilestone,
-  claimMilestone,
 };

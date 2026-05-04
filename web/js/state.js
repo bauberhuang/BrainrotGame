@@ -26,7 +26,7 @@ function createDefaultState() {
       playSeconds: 0,
     },
     totalPlaySeconds: 0,
-    claimedMilestones: {},
+    lastClaimedMilestoneIdx: -1,
     lastTick: Date.now(),
   };
 }
@@ -105,9 +105,7 @@ function loadState() {
         playSeconds: Math.max(0, Number(evt.playSeconds) || 0),
       },
       totalPlaySeconds: Math.max(0, Number(parsed.totalPlaySeconds) || 0),
-      claimedMilestones: parsed.claimedMilestones && typeof parsed.claimedMilestones === "object"
-        ? parsed.claimedMilestones
-        : {},
+      lastClaimedMilestoneIdx: parsed.lastClaimedMilestoneIdx != null ? Number(parsed.lastClaimedMilestoneIdx) : -1,
       lastTick: Number(parsed.lastTick) || Date.now(),
     };
   } catch (e) {
