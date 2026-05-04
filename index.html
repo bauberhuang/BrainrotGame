@@ -45,6 +45,10 @@
           <span class="label">Sailing</span>
           <strong>Open Sailing</strong>
         </button>
+        <button class="stat-pill stat-button account-launch" id="accountPageButton" type="button">
+          <span class="label">Account</span>
+          <strong id="accountButtonLabel">Sign In</strong>
+        </button>
       </div>
     </header>
 
@@ -233,6 +237,66 @@
       </article>
     </section>
 
+    <!-- ===== ACCOUNT PAGE ===== -->
+    <section class="rebirth-page hidden" id="accountPage">
+      <article class="rebirth-panel account-panel">
+        <div class="panel-title-row">
+          <div>
+            <p class="eyebrow">Brainrot Account</p>
+            <h2>Account</h2>
+          </div>
+          <button class="back-button" id="accountBackButton" type="button">Back</button>
+        </div>
+
+        <!-- Sign In -->
+        <div id="accountSigninView">
+          <h3>Sign In</h3>
+          <div class="account-form">
+            <input class="admin-input" id="signinUsername" type="text" placeholder="Username" />
+            <input class="admin-input" id="signinPassword" type="password" placeholder="Password" />
+            <button class="game-button buy" id="signinSubmitButton" type="button">Sign In</button>
+          </div>
+          <p class="status-text" id="signinStatus">Enter your credentials to sign in.</p>
+        </div>
+
+        <!-- Sign Up -->
+        <div id="accountSignupView" style="margin-top:28px;">
+          <h3>Sign Up</h3>
+          <div class="account-form">
+            <input class="admin-input" id="signupUsername" type="text" placeholder="Username" />
+            <input class="admin-input" id="signupPassword" type="password" placeholder="Password" />
+            <button class="game-button roll" id="signupSubmitButton" type="button">Sign Up</button>
+          </div>
+          <p class="status-text" id="signupStatus">Create a new account to save progress to the cloud.</p>
+        </div>
+
+        <!-- Settings (shown when signed in) -->
+        <div id="accountSettingsView" class="hidden">
+          <h3>Settings</h3>
+          <p class="rebirth-copy">Signed in as <strong id="settingsUsernameDisplay"></strong></p>
+
+          <div class="account-form" style="margin-top:16px;">
+            <p class="label">Change Username</p>
+            <input class="admin-input" id="settingsNewUsername" type="text" placeholder="New username" />
+            <button class="game-button buy" id="settingsChangeUsernameButton" type="button">Change Username</button>
+            <p class="status-text" id="settingsUsernameStatus"></p>
+          </div>
+
+          <div class="account-form" style="margin-top:20px;">
+            <p class="label">Change Password</p>
+            <input class="admin-input" id="settingsOldPassword" type="password" placeholder="Old password" />
+            <input class="admin-input" id="settingsNewPassword" type="password" placeholder="New password" />
+            <button class="game-button roll" id="settingsChangePasswordButton" type="button">Change Password</button>
+            <p class="status-text" id="settingsPasswordStatus"></p>
+          </div>
+
+          <div style="margin-top:24px;">
+            <button class="back-button" id="signOutButton" type="button">Sign Out</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
     <!-- ===== SAILING PAGE ===== -->
     <section class="rebirth-page hidden" id="sailingPage">
       <article class="rebirth-panel sailing-panel">
@@ -304,6 +368,7 @@
   <script src="web/js/game.js"></script>
   <script src="web/js/sailing.js"></script>
   <script src="web/js/admin.js"></script>
+  <script src="web/js/account.js"></script>
   <script src="web/js/main.js"></script>
 </body>
 </html>

@@ -825,6 +825,30 @@ body::after {
   transform: translateY(0);
 }
 
+.account-panel {
+  min-height: 360px;
+}
+
+.account-panel h3 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+}
+
+.account-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.account-form .label {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.account-form .game-button {
+  margin-top: 4px;
+}
+
 .admin-panel {
   min-height: 360px;
 }

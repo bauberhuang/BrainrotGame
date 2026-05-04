@@ -84,6 +84,7 @@
       admin: function () { return window.Admin && window.Admin.boot(); },
       rebirth: function () { return window.Rebirth && window.Rebirth.boot(); },
       sailing: function () { return window.Sailing && window.Sailing.boot(); },
+      account: function () { return window.Account && window.Account.boot(); },
     };
 
     if (boots[pageName]) {
@@ -119,6 +120,7 @@
   bindNav("rebirthPageButton", "rebirth");
   bindNav("adminAuthButton", "admin");
   bindNav("sailingPageButton", "sailing");
+  bindNav("accountPageButton", "account");
 
   // Back buttons
   function bindBack(buttonId) {
@@ -129,6 +131,16 @@
   bindBack("backToGameButton");
   bindBack("adminBackButton");
   bindBack("sailingBackButton");
+  bindBack("accountBackButton");
+
+  // Update account button label based on login status
+  function updateAccountButtonLabel() {
+    const label = document.getElementById("accountButtonLabel");
+    if (label) {
+      label.textContent = window.Account && window.Account.isLoggedIn() ? "My Account" : "Sign In";
+    }
+  }
+  updateAccountButtonLabel();
 
   /* ---------- Home page game button bindings ---------- */
 
@@ -168,6 +180,13 @@
   window.setInterval(() => {
     G().tickIncome();
   }, 1000);
+
+  // 8. Auto-save to server every 30s for logged-in users
+  window.setInterval(() => {
+    if (window.Account && window.Account.isLoggedIn()) {
+      window.Account.saveToServer();
+    }
+  }, 30000);
 
   // 7. Set initial status
   UI().setStatus("Your idle run started with $10. Roll and build your brainrot factory.");

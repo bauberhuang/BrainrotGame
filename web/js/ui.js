@@ -13,9 +13,9 @@ const dom = {};
 function cacheDom() {
   const ids = [
     "moneyDisplay", "totalIncomeDisplay",
-    "mainPage", "rebirthPage", "adminPage", "sailingPage",
-    "rebirthPageButton", "adminAuthButton", "sailingPageButton",
-    "backToGameButton", "adminBackButton", "sailingBackButton",
+    "mainPage", "rebirthPage", "adminPage", "sailingPage", "accountPage",
+    "rebirthPageButton", "adminAuthButton", "sailingPageButton", "accountPageButton",
+    "backToGameButton", "adminBackButton", "sailingBackButton", "accountBackButton",
     "rebirthCountDisplay", "cashMultiplierDisplay", "nextMultiplierDisplay",
     "rebirthRequirementDisplay", "rebirthDescription",
     "miniRebirthButton", "rebirthStatusText",
@@ -45,7 +45,7 @@ function cacheDom() {
 
 /* ---------- Page navigation (client-side, no reload) ---------- */
 
-const PAGE_IDS = ["mainPage", "rebirthPage", "adminPage", "sailingPage"];
+const PAGE_IDS = ["mainPage", "rebirthPage", "adminPage", "sailingPage", "accountPage"];
 
 function showPage(pageName) {
   for (const id of PAGE_IDS) {
@@ -60,6 +60,7 @@ function getPageElement(pageName) {
     case "admin": return dom.adminPage;
     case "rebirth": return dom.rebirthPage;
     case "sailing": return dom.sailingPage;
+    case "account": return dom.accountPage;
     default: return dom.mainPage;
   }
 }
