@@ -237,15 +237,15 @@ function renderOwned(selectedOwnedCharacterId) {
     if (sel) {
       var vch = ch, vlb = isLB, vrarity = rarity, vinc = vch.income * cashMult;
       cards.push(
-        '<div class="viewer-panel" style="grid-column:1/-1;margin:0 0 12px 0;padding:18px;border:1px solid rgba(38,20,10,0.12);border-radius:20px;background:rgba(255,255,255,0.8);">',
+        '<div class="viewer-panel">',
         '<div class="panel-title-row"><h2>View Brainrot</h2></div>',
-        '<article class="sprite-card compact-viewer" style="display:flex;gap:18px;margin-top:12px;">',
-        '<div class="sprite-frame" style="flex:0 0 160px;"><img src="' + (vch.img || '') + '" alt="" style="width:100%;border-radius:18px;" /></div>',
-        '<div class="sprite-copy" style="flex:1;">',
-        '<h3>' + vch.name + '</h3>',
+        '<article class="sprite-card compact-viewer">',
+        '<div class="sprite-frame viewer-frame"><img src="' + (vch.img || '') + '" alt="" /></div>',
+        '<div class="sprite-copy">',
+        '<h3 class="viewer-name">' + vch.name + '</h3>',
         '<span class="rarity-tag ' + vrarity.className + '">' + vrarity.text + '</span>',
         '<p class="flavor">' + (vch.flavor || '') + '</p>',
-        '<p><span>Cost:</span> <strong>' + U().formatMoney(vch.cost) + '</strong> &middot; <span>Money/s:</span> <strong>' + U().formatMoney(vinc) + '/s</strong></p>',
+        '<div class="viewer-stats"><span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(vch.cost) + '</strong></span><span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(vinc) + '/s</strong></span></div>',
         '</div>',
         '</article>',
         '</div>');
