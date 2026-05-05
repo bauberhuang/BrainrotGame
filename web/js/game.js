@@ -11,6 +11,19 @@ var UI = () => window.GameUI;
 
 let autoRollRemaining = D().CONST.AUTO_ROLL_SECONDS;
 let selectedOwnedCharacterId = null;
+let sellMode = false;
+
+function isSellMode() { return sellMode; }
+function toggleSellMode() {
+  sellMode = !sellMode;
+  if (sellMode) {
+    selectedOwnedCharacterId = null;
+    UI().setStatus("Sell mode ON — tap a brainrot to sell it.");
+  } else {
+    UI().setStatus("Sell mode OFF.");
+  }
+  fullRender();
+}
 
 function getAutoRollRemaining() { return autoRollRemaining; }
 function setAutoRollRemaining(v) { autoRollRemaining = v; }
@@ -142,6 +155,9 @@ function sellOwnedCharacter(characterId, mutationKey) {
   }
 
   UI().setStatus("Sold one " + ch.name + " for " + U().formatMoney(refund) + " (50% refund).");
+  if (window.GameUI && window.GameUI.hideFloatingViewer) {
+    window.GameUI.hideFloatingViewer();
+  }
   fullRender();
 }
 
@@ -400,8 +416,20 @@ function selectOwnedCharacter(event) {
 }
 
 function selectOwnedCard(cardEl) {
-  selectedOwnedCharacterId = cardEl.getAttribute("data-owned-id");
+  var cardId = cardEl.getAttribute("data-owned-id");
+  if (sellMode && cardId) {
+    var parts = cardId.split("|");
+    sellOwnedCharacter(parts[0], parts[1]);
+    return;
+  }
+  selectedOwnedCharacterId = cardId;
   fullRender();
+  setTimeout(function () {
+    var newCard = document.querySelector('[data-owned-id="' + selectedOwnedCharacterId + '"]');
+    if (newCard && window.GameUI && window.GameUI.showFloatingViewerInstant) {
+      window.GameUI.showFloatingViewerInstant(newCard);
+    }
+  }, 50);
 }
 
 /* ---------- Full render (calls UI + module renders) ---------- */
@@ -443,6 +471,19 @@ function fullRender() {
   const canBuy = st.money >= (st.currentRoll ? D().characterById[st.currentRoll.id]?.cost || Infinity : Infinity);
   const canManualRoll = st.money >= getManualRollCost();
   UI().updateActionButtons(canBuy, canManualRoll);
+
+  // Update sell mode button
+  var sellBtn = document.getElementById("sellModeButton");
+  if (sellBtn) {
+    var badge = sellBtn.querySelector(".inventory-toggle-badge");
+    if (sellMode) {
+      sellBtn.classList.add("sell-active");
+      if (badge) { badge.textContent = "ON"; badge.style.background = "#c62828"; }
+    } else {
+      sellBtn.classList.remove("sell-active");
+      if (badge) { badge.textContent = "OFF"; badge.style.background = ""; }
+    }
+  }
 
   callModuleRender("Rebirth");
   callModuleRender("Admin");
@@ -594,6 +635,8 @@ window.Game = {
   // render
   selectOwnedCharacter,
   selectOwnedCard,
+  toggleSellMode,
+  isSellMode,
   fullRender,
   callModuleRender,
   // tick

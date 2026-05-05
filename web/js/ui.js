@@ -188,6 +188,9 @@ function renderCollectionActions() {
   const total = (lb.normalCount || 0) + (lb.rainbowCount || 0) + (lb.radioactiveCount || 0) + (lb.diamondCount || 0);
   const hasAny = total > 0;
 
+  var badge = document.getElementById("inventoryBadge");
+  if (badge) badge.textContent = U().getUsedSlots(st);
+
   if (dom.slotDisplay) {
     var used = U().getUsedSlots(st);
     var max = U().getMaxSlots(st.rebirthCount);
@@ -269,14 +272,13 @@ function renderOwned(selectedOwnedCharacterId) {
       var encoded = encodeURIComponent(tooltipHTML);
 
       cards.push(
-        '<article class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + cardId + '" data-tooltip="' + encoded + '"',
+        '<article class="owned-card' + (sel ? ' selected' : '') + (window.Game && window.Game.isSellMode && window.Game.isSellMode() ? ' sell-mode-card' : '') + '" data-owned-id="' + cardId + '" data-tooltip="' + encoded + '"',
         ' onmouseenter="window.GameUI.showFloatingViewer(this,event)" onmouseleave="window.GameUI.hideFloatingViewer()"',
         ' onclick="window.Game.selectOwnedCard(this)">',
         '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + (mut.css ? ' mutation-' + mut.css : '') + '" src="' + (ch.img || '') + '" alt="" />',
         '<div><p class="owned-name">' + ch.name + '</p>',
         '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span> ×' + count + '</p>',
         '<p class="owned-meta">' + U().formatMoney(baseIncome * mut.mult) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
-        '<button class="sell-mini-btn" onclick="event.stopPropagation();window.Game.sellOwnedCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" title="Sell">−</button>',
         '</article>');
     }
   }
@@ -309,6 +311,29 @@ function showFloatingViewer(cardEl, event) {
       viewer.classList.remove("hidden");
     }
   }, 500);
+}
+
+function showFloatingViewerInstant(cardEl) {
+  if (_hoverTimer) clearTimeout(_hoverTimer);
+  if (!document.contains(cardEl)) return;
+  var tooltip = cardEl.getAttribute("data-tooltip");
+  if (!tooltip) return;
+  var body = document.getElementById("floatingViewerBody");
+  var viewer = document.getElementById("floatingViewer");
+  if (body) body.innerHTML = decodeURIComponent(tooltip);
+  if (viewer) {
+    var rect = cardEl.getBoundingClientRect();
+    var vw = window.innerWidth;
+    var left = rect.right + 14;
+    if (left + 400 > vw) left = rect.left - 400 - 14;
+    if (left < 8) left = 8;
+    var top = rect.top;
+    if (top + 300 > window.innerHeight) top = window.innerHeight - 310;
+    if (top < 8) top = 8;
+    viewer.style.left = left + "px";
+    viewer.style.top = top + "px";
+    viewer.classList.remove("hidden");
+  }
 }
 
 function hideFloatingViewer() {
@@ -366,5 +391,6 @@ window.GameUI = {
   renderPlaytimeRewards,
   bindClick,
   showFloatingViewer,
+  showFloatingViewerInstant,
   hideFloatingViewer,
 };

@@ -552,14 +552,6 @@ body.event-radioactive .admin-input::placeholder {
   50%      { text-shadow: 0 0 22px rgba(255, 45, 149, 0.60), 0 0 44px rgba(100, 200, 255, 0.35), 0 0 60px rgba(180, 71, 234, 0.15); }
 }
 
-.collection-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 /* --- Viewer panel — cyber neon "View Brainrot" card --- */
 
 .viewer-panel {
@@ -1269,6 +1261,18 @@ body.event-radioactive .admin-input::placeholder {
 }
 .mini-action:active { transform: translateY(0); }
 
+.sell-action {
+  background: linear-gradient(135deg, #b71c1c, #e53935, #ff5252) !important;
+  border-color: rgba(255, 50, 50, 0.4) !important;
+  animation: none !important;
+  margin-bottom: 10px;
+  width: 100%;
+  border-radius: 14px !important;
+}
+.sell-action:hover {
+  box-shadow: 0 0 22px rgba(255, 50, 50, 0.50), 0 0 40px rgba(255, 80, 80, 0.22) !important;
+}
+
 /* --- Rebirth / info grids --- */
 
 .rebirth-grid,
@@ -1636,6 +1640,108 @@ body.event-radioactive .admin-input::placeholder {
 
 /* --- Collection / owned list --- */
 
+/* --- Inventory toggle --- */
+
+.inventory-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inventory-toggle:hover {
+  border-color: var(--purple-bright);
+  box-shadow: var(--glow-purple);
+}
+
+.inventory-toggle-icon {
+  font-size: 1.3rem;
+}
+
+.inventory-toggle-label {
+  flex: 1;
+  text-align: left;
+}
+
+.inventory-toggle-badge {
+  background: var(--purple-bright);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.inventory-toggle-chevron {
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+  transition: transform 0.2s ease;
+}
+
+.inventory-toggle.open .inventory-toggle-chevron {
+  transform: rotate(90deg);
+}
+
+.sell-toggle {
+  margin-bottom: 8px;
+  border-color: rgba(255, 50, 50, 0.35);
+  background: linear-gradient(135deg, rgba(180, 20, 20, 0.35), rgba(220, 40, 40, 0.20));
+}
+.sell-toggle:hover {
+  border-color: rgba(255, 70, 70, 0.55);
+  box-shadow: 0 0 22px rgba(255, 50, 50, 0.35);
+}
+.sell-toggle .inventory-toggle-badge {
+  background: #e53935;
+}
+
+.sell-active {
+  border-color: rgba(255, 50, 50, 0.6) !important;
+  box-shadow: 0 0 18px rgba(255, 50, 50, 0.30) !important;
+  animation: sellPulse 2s ease-in-out infinite !important;
+}
+
+@keyframes sellPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(255, 50, 50, 0.30); }
+  50%      { box-shadow: 0 0 30px rgba(255, 50, 50, 0.55); }
+}
+
+.sell-mode-card .owned-thumb {
+  filter: brightness(0.6) saturate(0.3) hue-rotate(-30deg);
+  border: 2px solid rgba(255, 50, 50, 0.6);
+}
+
+.sell-mode-card {
+  border-color: rgba(255, 50, 50, 0.4) !important;
+}
+
+.sell-mode-card:hover {
+  border-color: rgba(255, 50, 50, 0.7) !important;
+  box-shadow: 0 0 16px rgba(255, 50, 50, 0.25) !important;
+}
+
+.collection-body {
+  margin-top: 12px;
+}
+
+.collection-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .owned-list {
   margin-top: 16px;
   display: grid;
@@ -1944,7 +2050,7 @@ body.event-radioactive .admin-input::placeholder {
   }
 
   .owned-card {
-    grid-template-columns: 48px minmax(0, 1fr) 26px;
+    grid-template-columns: 48px minmax(0, 1fr);
     gap: 8px;
   }
 

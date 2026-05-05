@@ -157,6 +157,30 @@
 
   /* ---------- Home page game button bindings ---------- */
 
+  // Inventory toggle
+  var toggleBtn = document.getElementById("inventoryToggle");
+  var collectionBody = document.getElementById("collectionBody");
+  if (toggleBtn && collectionBody) {
+    toggleBtn.addEventListener("click", function () {
+      var open = !collectionBody.classList.contains("hidden");
+      if (open) {
+        collectionBody.classList.add("hidden");
+        toggleBtn.classList.remove("open");
+      } else {
+        collectionBody.classList.remove("hidden");
+        toggleBtn.classList.add("open");
+      }
+    });
+  }
+
+  // Sell mode toggle
+  var sellModeBtn = document.getElementById("sellModeButton");
+  if (sellModeBtn) {
+    sellModeBtn.addEventListener("click", function () {
+      G().toggleSellMode();
+    });
+  }
+
   UI().bindClick(UI().dom.rollButton, () => G().rollCharacter(true));
   UI().bindClick(UI().dom.buyButton, () => G().buyCurrentCharacter());
   if (UI().dom.ownedList) {

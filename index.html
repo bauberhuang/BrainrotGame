@@ -101,17 +101,27 @@
         <p class="status-text" id="statusText">Roll to find your first brainrot.</p>
       </section>
 
-      <aside class="collection-panel">
-        <div class="panel-title-row">
-          <h2>Your Collection</h2>
+      <aside class="collection-panel" id="collectionPanel">
+        <button class="inventory-toggle" id="inventoryToggle" type="button">
+          <span class="inventory-toggle-icon">📦</span>
+          <span class="inventory-toggle-label">Inventory</span>
+          <span class="inventory-toggle-badge" id="inventoryBadge">0</span>
+          <span class="inventory-toggle-chevron">▸</span>
+        </button>
+        <button class="inventory-toggle sell-toggle" id="sellModeButton" type="button">
+          <span class="inventory-toggle-icon">💸</span>
+          <span class="inventory-toggle-label">Sell Mode</span>
+          <span class="inventory-toggle-badge">OFF</span>
+        </button>
+        <div class="collection-body hidden" id="collectionBody">
           <div class="collection-actions">
             <span class="small-note" id="slotDisplay">Slots 1/10</span>
             <span class="small-note" id="luckyBlockInventoryDisplay">Lucky Blocks 0</span>
             <button class="mini-action" id="uncoverLuckyBlockButton" type="button" disabled>Uncover 1</button>
             <button class="mini-action" id="uncoverAllLuckyBlocksButton" type="button" disabled>Uncover All</button>
           </div>
+          <div class="owned-list" id="ownedList"></div>
         </div>
-        <div class="owned-list" id="ownedList"></div>
       </aside>
     </section>
 
