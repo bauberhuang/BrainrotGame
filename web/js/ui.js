@@ -37,6 +37,7 @@ function cacheDom() {
     "sailingConfirmButton", "sailingStatusText",
     "playtimeRewardCard", "playtimeRewardLabel", "playtimeRewardButton",
     "totalPlaytimeDisplay",
+    "mathPage", "mathPageButton", "mathBackButton",
   ];
   for (const id of ids) {
     dom[id] = document.querySelector(`#${id}`);
@@ -45,7 +46,7 @@ function cacheDom() {
 
 /* ---------- Page navigation (client-side, no reload) ---------- */
 
-const PAGE_IDS = ["mainPage", "rebirthPage", "adminPage", "sailingPage", "accountPage"];
+const PAGE_IDS = ["mainPage", "rebirthPage", "adminPage", "sailingPage", "accountPage", "mathPage"];
 
 function showPage(pageName) {
   for (const id of PAGE_IDS) {
@@ -61,6 +62,7 @@ function getPageElement(pageName) {
     case "rebirth": return dom.rebirthPage;
     case "sailing": return dom.sailingPage;
     case "account": return dom.accountPage;
+    case "math": return dom.mathPage;
     default: return dom.mainPage;
   }
 }
@@ -178,15 +180,22 @@ function updateActionButtons(canBuy, canManualRoll) {
 
 function renderCollectionActions() {
   const st = S().getState();
-  const lb = st.owned["lucky-block"] || { normalCount: 0, rainbowCount: 0, radioactiveCount: 0 };
-  const total = (lb.normalCount || 0) + (lb.rainbowCount || 0) + (lb.radioactiveCount || 0);
+  const lb = st.owned["lucky-block"] || { normalCount: 0, rainbowCount: 0, radioactiveCount: 0, diamondCount: 0 };
+  const total = (lb.normalCount || 0) + (lb.rainbowCount || 0) + (lb.radioactiveCount || 0) + (lb.diamondCount || 0);
+  const hasAny = total > 0;
 
   if (dom.luckyBlockInventoryDisplay) {
     dom.luckyBlockInventoryDisplay.textContent = `Lucky Blocks ${total}`;
-    dom.luckyBlockInventoryDisplay.classList.toggle("hidden", total <= 0);
+    dom.luckyBlockInventoryDisplay.classList.toggle("hidden", !hasAny);
   }
-  if (dom.uncoverLuckyBlockButton) dom.uncoverLuckyBlockButton.classList.toggle("hidden", total <= 0);
-  if (dom.uncoverAllLuckyBlocksButton) dom.uncoverAllLuckyBlocksButton.classList.toggle("hidden", total <= 0);
+  if (dom.uncoverLuckyBlockButton) {
+    dom.uncoverLuckyBlockButton.classList.toggle("hidden", false);
+    dom.uncoverLuckyBlockButton.disabled = !hasAny;
+  }
+  if (dom.uncoverAllLuckyBlocksButton) {
+    dom.uncoverAllLuckyBlocksButton.classList.toggle("hidden", false);
+    dom.uncoverAllLuckyBlocksButton.disabled = !hasAny;
+  }
 }
 
 function renderOwned(selectedOwnedCharacterId) {

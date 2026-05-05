@@ -45,6 +45,10 @@
           <span class="label">Sailing</span>
           <strong>Open Sailing</strong>
         </button>
+        <button class="stat-pill stat-button math-launch" id="mathPageButton" type="button">
+          <span class="label">Math</span>
+          <strong>Brainrot Math</strong>
+        </button>
         <button class="stat-pill stat-button account-launch" id="accountPageButton" type="button">
           <span class="label">Account</span>
           <strong id="accountButtonLabel">Sign In</strong>
@@ -114,8 +118,8 @@
           <h2>Your Collection</h2>
           <div class="collection-actions">
             <span class="small-note" id="luckyBlockInventoryDisplay">Lucky Blocks 0</span>
-            <button class="mini-action hidden" id="uncoverLuckyBlockButton" type="button">Uncover 1</button>
-            <button class="mini-action hidden" id="uncoverAllLuckyBlocksButton" type="button">Uncover All</button>
+            <button class="mini-action" id="uncoverLuckyBlockButton" type="button" disabled>Uncover 1</button>
+            <button class="mini-action" id="uncoverAllLuckyBlocksButton" type="button" disabled>Uncover All</button>
           </div>
         </div>
         <div class="owned-list" id="ownedList"></div>
@@ -233,6 +237,71 @@
             <button class="game-button roll" id="adminClearEventButton" type="button">Off</button>
           </div>
           <p class="status-text" id="adminSpawnerStatusText">Spawn brainrots directly into your collection.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ===== MATH PAGE ===== -->
+    <section class="rebirth-page hidden" id="mathPage">
+      <article class="rebirth-panel math-panel">
+        <div class="panel-title-row">
+          <div>
+            <p class="eyebrow">Brainrot Academy</p>
+            <h2>Math Challenge</h2>
+          </div>
+          <button class="back-button" id="mathBackButton" type="button">Back</button>
+        </div>
+
+        <!-- Start View -->
+        <div id="mathStartView">
+          <p class="rebirth-copy">Solve <strong>xxxx.xx ± xxxx.xx</strong> problems against a 40-second clock. Each correct answer raises the reward rarity. One mistake ends the run.</p>
+          <div class="math-info-grid">
+            <div class="rebirth-info-block">
+              <span class="label">Time per Question</span>
+              <strong>40s</strong>
+            </div>
+            <div class="rebirth-info-block">
+              <span class="label">Cooldown</span>
+              <strong>5 min</strong>
+            </div>
+          </div>
+          <p class="status-text" id="mathCooldownDisplay"></p>
+          <button class="game-button math-action" id="mathStartButton" type="button">Start Challenge</button>
+        </div>
+
+        <!-- Game View -->
+        <div id="mathGameView" class="hidden">
+          <div class="math-game-grid">
+            <div class="math-problem-card">
+              <div class="math-timer-badge" id="mathTimerDisplay">40s</div>
+              <p class="math-problem-text" id="mathProblem">Loading...</p>
+              <div class="math-input-row">
+                <input class="admin-input math-answer-input" id="mathAnswerInput" type="number" step="0.01" placeholder="Your answer..." />
+                <button class="game-button buy" id="mathSubmitButton" type="button">Submit</button>
+              </div>
+              <p class="math-feedback" id="mathFeedback"></p>
+            </div>
+            <div class="math-stats-card">
+              <div class="rebirth-info-block">
+                <span class="label">Correct</span>
+                <strong id="mathCountDisplay">0</strong>
+              </div>
+              <div class="rebirth-info-block">
+                <span class="label">Current Reward Tier</span>
+                <strong id="mathCurrentRarity">COMMON</strong>
+              </div>
+              <div class="math-tier-list">
+                <p class="small-note">1-9 Common · 10-14 Uncommon · 15-19 Epic · 20-22 Mythic · 23-24 God · 25-34 Secret · 35-49 Celestial · 50-99 Divine · 100+ OG</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result View -->
+        <div id="mathResultView" class="hidden">
+          <p class="math-result-text" id="mathResultText"></p>
+          <p class="status-text" id="mathCooldownDisplay2"></p>
+          <button class="game-button math-action" id="mathStartButton2" type="button" style="display:none;">Start Challenge</button>
         </div>
       </article>
     </section>
@@ -369,6 +438,7 @@
   <script src="web/js/sailing.js"></script>
   <script src="web/js/admin.js"></script>
   <script src="web/js/account.js"></script>
+  <script src="web/js/math.js"></script>
   <script src="web/js/main.js"></script>
 </body>
 </html>

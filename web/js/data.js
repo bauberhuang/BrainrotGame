@@ -71,7 +71,7 @@ tier: "og",
     income: 0,
 tier: "god",
         flavor: "A sealed brainrot box. Buy it, stash it, then uncover it inside your collection.",
-    img: "img/lucky-block.jfif",
+    img: "img/lucky-block.png",
     isLuckyBlock: true,
   },
   // ---- OG tier (once in a lifetime) ----

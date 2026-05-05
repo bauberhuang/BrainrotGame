@@ -85,6 +85,7 @@
       rebirth: function () { return window.Rebirth && window.Rebirth.boot(); },
       sailing: function () { return window.Sailing && window.Sailing.boot(); },
       account: function () { return window.Account && window.Account.boot(); },
+      math: function () { return window.MathGame && window.MathGame.boot(); },
     };
 
     if (boots[pageName]) {
@@ -121,6 +122,7 @@
   bindNav("adminAuthButton", "admin");
   bindNav("sailingPageButton", "sailing");
   bindNav("accountPageButton", "account");
+  bindNav("mathPageButton", "math");
 
   // Back buttons
   function bindBack(buttonId) {
@@ -132,6 +134,7 @@
   bindBack("adminBackButton");
   bindBack("sailingBackButton");
   bindBack("accountBackButton");
+  bindBack("mathBackButton");
 
   // Update account button label based on login status
   function updateAccountButtonLabel() {
