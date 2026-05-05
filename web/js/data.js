@@ -54,7 +54,7 @@
     mutations: { normal: { label: "NORMAL", multiplier: 1, countKey: "normalCount", className: "normal" } },
     MUTATIONS: { normal: { label: "NORMAL", multiplier: 1, countKey: "normalCount", className: "normal" } },
     EVENT_MUTATION_WEIGHTS: { rainbow: 4, radioactive: 1, diamond: 2 },
-    CONST: { SAVE_KEY_PREFIX: "brainrot-idle-save-v4", MAX_REBIRTHS: 20, AUTO_ROLL_SECONDS: 10, PLAYTIME_MILESTONES: [] },
+    CONST: { SAVE_KEY_PREFIX: "brainrot-idle-save-v4", MAX_REBIRTHS: 35, AUTO_ROLL_SECONDS: 10, PLAYTIME_MILESTONES: [] },
     characterById: {},
     luckyBlockCharacterById: {},
     sailingIslandById: {},

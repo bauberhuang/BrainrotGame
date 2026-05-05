@@ -25,6 +25,10 @@
           <span class="label">Money</span>
           <strong id="moneyDisplay">$10.00</strong>
         </div>
+        <div class="stat-pill math-token-pill">
+          <span class="label">Math Tokens</span>
+          <strong id="mathTokensDisplay">0</strong>
+        </div>
         <div class="stat-pill accent">
           <span class="label">Money/s All</span>
           <strong id="totalIncomeDisplay">$0.00/s</strong>
@@ -101,6 +105,7 @@
         <div class="panel-title-row">
           <h2>Your Collection</h2>
           <div class="collection-actions">
+            <span class="small-note" id="slotDisplay">Slots 1/10</span>
             <span class="small-note" id="luckyBlockInventoryDisplay">Lucky Blocks 0</span>
             <button class="mini-action" id="uncoverLuckyBlockButton" type="button" disabled>Uncover 1</button>
             <button class="mini-action" id="uncoverAllLuckyBlocksButton" type="button" disabled>Uncover All</button>
@@ -250,7 +255,7 @@
             </div>
             <div class="rebirth-info-block">
               <span class="label">Set Rebirth</span>
-              <input class="admin-input" id="adminSetRebirthInput" type="number" min="0" max="20" value="0" />
+              <input class="admin-input" id="adminSetRebirthInput" type="number" min="0" max="35" value="0" />
             </div>
           </div>
 
@@ -334,8 +339,11 @@
         <!-- Result View -->
         <div id="mathResultView" class="hidden">
           <p class="math-result-text" id="mathResultText"></p>
+          <div class="math-reward-choice hidden" id="mathRewardChoice">
+            <button class="game-button buy" id="mathClaimBrainrotButton" type="button">Claim Brainrot</button>
+            <button class="game-button roll" id="mathClaimTokensButton" type="button">Claim Tokens</button>
+          </div>
           <p class="status-text" id="mathCooldownDisplay2"></p>
-          <button class="game-button math-action" id="mathStartButton2" type="button" style="display:none;">Start Challenge</button>
         </div>
       </article>
     </section>

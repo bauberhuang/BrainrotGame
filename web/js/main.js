@@ -214,7 +214,7 @@
   }, 30000);
 
   // 9. Set initial status
-  UI().setStatus("Your idle run started with $10. Roll and build your brainrot factory.");
+  UI().setStatus("Your idle run started with $10,000. Roll and build your brainrot factory.");
   UI().setRebirthStatus("Stack rebirths to push every brainrot income higher.");
 
   console.log("Brainrot Casino initialized. Open http://127.0.0.1:5002");

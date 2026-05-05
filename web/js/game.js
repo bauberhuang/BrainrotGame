@@ -20,17 +20,14 @@ function setSelectedOwnedCharacterId(v) { selectedOwnedCharacterId = v; }
 /* ---------- Roll logic ---------- */
 
 function weightedRoll() {
-  var st = S().getState();
-  var affordable = D().characters.filter(function (ch) { return st.money >= ch.cost; });
-  if (affordable.length === 0) affordable = D().characters;
-  var totalValue = affordable.reduce(function (t, ch) { return t + ch.value; }, 0);
+  var totalValue = D().totalCharacterValue;
   var roll = Math.random() * totalValue;
   var running = 0;
-  for (var i = 0; i < affordable.length; i++) {
-    running += affordable[i].value;
-    if (roll <= running) return affordable[i];
+  for (var i = 0; i < D().characters.length; i++) {
+    running += D().characters[i].value;
+    if (roll <= running) return D().characters[i];
   }
-  return affordable[affordable.length - 1];
+  return D().characters[D().characters.length - 1];
 }
 
 function getMutationChance(mutation) {
@@ -123,6 +120,31 @@ function grantOwnedCharacter(characterId, mutation, amount) {
   st.owned[characterId][countKey] += amount;
 }
 
+function sellOwnedCharacter(characterId, mutationKey) {
+  var st = S().getState();
+  var entry = st.owned[characterId];
+  if (!entry) return;
+  if (!mutationKey) mutationKey = "normalCount";
+
+  if (!entry[mutationKey] || entry[mutationKey] <= 0) return;
+  entry[mutationKey] -= 1;
+
+  var ch = U().getOwnedCharacterData(characterId);
+  var refund = Math.floor(ch.cost * 0.5);
+  st.money += refund;
+
+  var totalLeft = (entry.normalCount || 0) + (entry.rainbowCount || 0) + (entry.radioactiveCount || 0) + (entry.diamondCount || 0);
+  if (totalLeft <= 0) {
+    delete st.owned[characterId];
+    if (getSelectedOwnedCharacterId() === characterId) {
+      setSelectedOwnedCharacterId(null);
+    }
+  }
+
+  UI().setStatus("Sold one " + ch.name + " for " + U().formatMoney(refund) + " (50% refund).");
+  fullRender();
+}
+
 function buyCurrentCharacter() {
   const st = S().getState();
   ensureCurrentRoll();
@@ -130,13 +152,37 @@ function buyCurrentCharacter() {
   const current = st.currentRoll;
   const ch = D().characterById[current.id];
 
-  if (st.money < ch.cost) {
-    UI().setStatus(`You need ${U().formatMoney(ch.cost)} to buy ${ch.name}.`);
+  // Slot check
+  var usedSlots = U().getUsedSlots(st);
+  var maxSlots = U().getMaxSlots(st.rebirthCount);
+  if (usedSlots >= maxSlots) {
+    UI().setStatus("Inventory full (" + usedSlots + "/" + maxSlots + ")! Rebirth to get more slots.");
     fullRender();
     return;
   }
 
-  st.money -= ch.cost;
+  // Token discount
+  var tier = U().getRarityLabel(ch.value, undefined, ch.tier).className;
+  var discountMap = { common: 10, uncommon: 15, epic: 20, mythic: 23, god: 25, secret: 35, celestial: 50, divine: 100, og: 200 };
+  var fraction = discountMap[tier] || 0;
+  var tokenDiscount = 0;
+  if (st.mathTokens > 0 && fraction > 0) {
+    tokenDiscount = Math.floor(ch.cost / fraction);
+  }
+  var finalCost = Math.max(0, ch.cost - tokenDiscount);
+
+  if (st.money < finalCost) {
+    if ((st.mathTokens || 0) <= 0) {
+      UI().setStatus("No money and no tokens! Play Math Challenge to earn tokens.");
+    } else {
+      UI().setStatus(`You need ${U().formatMoney(finalCost)} to buy ${ch.name}. You have ${st.mathTokens} math token(s).`);
+    }
+    fullRender();
+    return;
+  }
+
+  st.money -= finalCost;
+  if (tokenDiscount > 0) st.mathTokens = Math.max(0, st.mathTokens - 1);
   grantOwnedCharacter(current.id, current.mutation);
 
   if (current.mutation === "rainbow") {
@@ -328,7 +374,7 @@ function performRebirth() {
   }
 
   st.rebirthCount += 1;
-  st.money = 10;
+  st.money = st.rebirthCount * 10000;
   st.currentRoll = null;
   st.owned = {};
   st.sailing = S().normalizeSailingState();
@@ -366,11 +412,29 @@ function callModuleRender(name) {
 }
 
 function fullRender() {
-  // Ensure selected owned character is valid
+  // selectedOwnedCharacterId is now "characterId|mutationKey"
   const st = S().getState();
-  const ownedIds = Object.keys(st.owned);
-  if (!selectedOwnedCharacterId || !st.owned[selectedOwnedCharacterId]) {
-    selectedOwnedCharacterId = ownedIds.length > 0 ? ownedIds[0] : null;
+  if (selectedOwnedCharacterId) {
+    var parts = selectedOwnedCharacterId.split("|");
+    var cid = parts[0];
+    var mkey = parts[1];
+    if (!st.owned[cid] || !st.owned[cid][mkey] || st.owned[cid][mkey] <= 0) {
+      selectedOwnedCharacterId = null;
+    }
+  }
+  if (!selectedOwnedCharacterId) {
+    // Pick first available mutation group
+    var ownedIds = Object.keys(st.owned);
+    if (ownedIds.length > 0) {
+      var first = st.owned[ownedIds[0]];
+      var muts = ["normalCount","rainbowCount","diamondCount","radioactiveCount"];
+      for (var mi = 0; mi < muts.length; mi++) {
+        if (first[muts[mi]] > 0) {
+          selectedOwnedCharacterId = ownedIds[0] + "|" + muts[mi];
+          break;
+        }
+      }
+    }
   }
 
   UI().fullRender(selectedOwnedCharacterId, autoRollRemaining);
@@ -511,6 +575,7 @@ window.Game = {
   autoRollCharacter,
   // buy
   grantOwnedCharacter,
+  sellOwnedCharacter,
   buyCurrentCharacter,
   // income
   getTotalIncomePerSecond,

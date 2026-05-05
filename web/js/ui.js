@@ -39,6 +39,7 @@ function cacheDom() {
     "totalPlaytimeDisplay",
     "mathPage", "mathBackButton",
     "settingsPage", "settingsPageButton", "settingsBackButton",
+    "mathTokensDisplay", "slotDisplay",
   ];
   for (const id of ids) {
     dom[id] = document.querySelector(`#${id}`);
@@ -98,6 +99,7 @@ function getThemeClassName(mutation) {
 function renderTotals() {
   const st = S().getState();
   if (dom.moneyDisplay) dom.moneyDisplay.textContent = U().formatMoney(st.money);
+  if (dom.mathTokensDisplay) dom.mathTokensDisplay.textContent = st.mathTokens || 0;
   // totalIncome is computed in game.js and stored temporarily
   const income = window._totalIncomePerSecond || 0;
   if (dom.totalIncomeDisplay) dom.totalIncomeDisplay.textContent = `${U().formatMoney(income)}/s`;
@@ -186,6 +188,11 @@ function renderCollectionActions() {
   const total = (lb.normalCount || 0) + (lb.rainbowCount || 0) + (lb.radioactiveCount || 0) + (lb.diamondCount || 0);
   const hasAny = total > 0;
 
+  if (dom.slotDisplay) {
+    var used = U().getUsedSlots(st);
+    var max = U().getMaxSlots(st.rebirthCount);
+    dom.slotDisplay.textContent = "Slots " + used + "/" + max;
+  }
   if (dom.luckyBlockInventoryDisplay) {
     dom.luckyBlockInventoryDisplay.textContent = `Lucky Blocks ${total}`;
     dom.luckyBlockInventoryDisplay.classList.toggle("hidden", !hasAny);
@@ -215,7 +222,14 @@ function renderOwned(selectedOwnedCharacterId) {
   var RADIOACTIVE = D().CONST.RADIOACTIVE_MULTIPLIER;
   var DIAMOND = D().CONST.DIAMOND_MULTIPLIER;
   var defaultIds = D().defaultLuckyBlockIds;
+  var mutOrder = [
+    { key: "normalCount", label: "NORMAL", css: "", mult: 1 },
+    { key: "rainbowCount", label: "RAINBOW", css: "rainbow", mult: RAINBOW },
+    { key: "diamondCount", label: "DIAMOND", css: "diamond", mult: DIAMOND },
+    { key: "radioactiveCount", label: "RADIOACTIVE", css: "radioactive", mult: RADIOACTIVE },
+  ];
   var cards = [];
+
   for (var i = 0; i < entries.length; i++) {
     var entry = entries[i];
     var ch = U().getOwnedCharacterData(entry.id);
@@ -224,42 +238,45 @@ function renderOwned(selectedOwnedCharacterId) {
       ch.value,
       isLB ? U().getLuckyBlockPercentNumber(D().luckyBlockCharacterById[entry.id], defaultIds)
            : U().getPercentNumberFromValue(ch.value), ch.tier);
-    var income = (entry.normalCount * ch.income
-      + entry.rainbowCount * ch.income * RAINBOW
-      + entry.radioactiveCount * ch.income * RADIOACTIVE
-      + (entry.diamondCount || 0) * ch.income * DIAMOND) * cashMult;
     var baseIncome = ch.income * cashMult;
-    var sel = selectedOwnedCharacterId === entry.id;
-    cards.push(
-      '<article onclick="window.Game.selectOwnedCard(this)" class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + entry.id + '">',
-      '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + '" src="' + (ch.img || '') + '" alt="" />',
-      '<div><p class="owned-name">' + ch.name + '</p>',
-      '<p class="owned-meta">' + rarity.text + '</p>' +
-      (entry.normalCount > 0 || entry.rainbowCount > 0 || entry.radioactiveCount > 0 || entry.diamondCount > 0 ?
-        '<p class="owned-meta">' +
-        (entry.normalCount > 0 ? 'Normal ' + entry.normalCount + ' ' : '') +
-        (entry.rainbowCount > 0 ? 'Rainbow ' + entry.rainbowCount + ' ' : '') +
-        (entry.radioactiveCount > 0 ? 'Radioactive ' + entry.radioactiveCount + ' ' : '') +
-        (entry.diamondCount > 0 ? 'Diamond ' + entry.diamondCount : '') +
-        '</p>' : ''),
-      '<p class="owned-meta">' + U().formatMoney(baseIncome) + '/s each &middot; Total ' + U().formatMoney(income) + '/s</p></div>',
-      '</article>');
-    // Insert viewer right after the selected card
-    if (sel) {
-      var vch = ch, vlb = isLB, vrarity = rarity, vinc = vch.income * cashMult;
+
+    // One card per mutation group
+    for (var m = 0; m < mutOrder.length; m++) {
+      var mut = mutOrder[m];
+      var count = entry[mut.key] || 0;
+      if (count <= 0) continue;
+
+      var mutIncome = count * baseIncome * mut.mult;
+      var cardId = entry.id + "|" + mut.key;
+      var sel = selectedOwnedCharacterId === cardId;
+
       cards.push(
-        '<div class="viewer-panel">',
-        '<div class="panel-title-row"><h2>View Brainrot</h2></div>',
-        '<article class="sprite-card compact-viewer">',
-        '<div class="sprite-frame viewer-frame"><img src="' + (vch.img || '') + '" alt="" /></div>',
-        '<div class="sprite-copy">',
-        '<h3 class="viewer-name">' + vch.name + '</h3>',
-        '<span class="rarity-tag ' + vrarity.className + '">' + vrarity.text + '</span>',
-        '<p class="flavor">' + (vch.flavor || '') + '</p>',
-        '<div class="viewer-stats"><span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(vch.cost) + '</strong></span><span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(vinc) + '/s</strong></span></div>',
-        '</div>',
-        '</article>',
-        '</div>');
+        '<article onclick="window.Game.selectOwnedCard(this)" class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + cardId + '">',
+        '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + (mut.css ? ' mutation-' + mut.css : '') + '" src="' + (ch.img || '') + '" alt="" />',
+        '<div><p class="owned-name">' + ch.name + '</p>',
+        '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span> ×' + count + '</p>',
+        '<p class="owned-meta">' + U().formatMoney(baseIncome * mut.mult) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
+        '</article>');
+
+      // Viewer panel for selected mutation card
+      if (sel) {
+        var vch = ch, vinc = baseIncome * mut.mult;
+        cards.push(
+          '<div class="viewer-panel">',
+          '<div class="panel-title-row"><h2>View Brainrot</h2></div>',
+          '<article class="sprite-card compact-viewer">',
+          '<div class="sprite-frame viewer-frame"><img src="' + (vch.img || '') + '" alt="" /></div>',
+          '<div class="sprite-copy">',
+          '<h3 class="viewer-name">' + vch.name + '</h3>',
+          '<span class="rarity-tag ' + rarity.className + '">' + rarity.text + '</span>',
+          '<span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '" style="margin-left:6px;">' + mut.label + '</span>',
+          '<p class="flavor">' + (vch.flavor || '') + '</p>',
+          '<div class="viewer-stats"><span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(vch.cost) + '</strong></span><span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(vinc) + '/s</strong></span></div>',
+          '<div class="viewer-actions"><button class="game-button roll sell-button" onclick="window.Game.sellOwnedCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" type="button">Sell One (50% refund)</button></div>',
+          '</div>',
+          '</article>',
+          '</div>');
+      }
     }
   }
   dom.ownedList.innerHTML = cards.join('');

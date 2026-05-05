@@ -19,6 +19,9 @@
   var timerInterval = null;
   var active = false;
   var opType = "";                // '+', '-', '*', '/'
+  var pendingRewardRarity = null;
+  var pendingRewardCount = 0;
+  var pendingTokenCount = 0;
 
   /* ---------- Cooldown ---------- */
 
@@ -226,10 +229,40 @@
     var count = correctCount;
     var rarity = getRarityForCount(count);
     var rarityLabel = getRarityLabelForCount(count);
+    pendingRewardRarity = rarity;
+    pendingRewardCount = count;
+    pendingTokenCount = count; // 1 token per correct answer
 
-    // Grant a random brainrot of the earned rarity or better
+    // Show result view with choice
+    var gameView = document.getElementById("mathGameView");
+    var resultView = document.getElementById("mathResultView");
+    var inputEl = document.getElementById("mathAnswerInput");
+
+    if (gameView) gameView.classList.add("hidden");
+    if (resultView) resultView.classList.remove("hidden");
+    if (inputEl) inputEl.disabled = true;
+
+    var resultText = document.getElementById("mathResultText");
+    if (resultText) {
+      resultText.textContent = "You answered " + count + " correctly. Choose your reward:";
+    }
+
+    var choiceRow = document.getElementById("mathRewardChoice");
+    if (choiceRow) choiceRow.classList.remove("hidden");
+    var brainrotBtn = document.getElementById("mathClaimBrainrotButton");
+    var tokenBtn = document.getElementById("mathClaimTokensButton");
+    if (brainrotBtn) brainrotBtn.textContent = "Claim " + rarityLabel + " Brainrot";
+    if (tokenBtn) tokenBtn.textContent = "Claim " + pendingTokenCount + " Token" + (pendingTokenCount !== 1 ? "s" : "");
+
+    startCooldownDisplay();
+    G().fullRender();
+    UI().setStatus("Math challenge: " + count + " correct. Choose brainrot or tokens.");
+  }
+
+  function claimBrainrotReward() {
+    if (!pendingRewardRarity) return;
     var rOrder = ["og","divine","celestial","secret","god","mythic","epic","uncommon","common"];
-    var minIdx = rOrder.indexOf(rarity);
+    var minIdx = rOrder.indexOf(pendingRewardRarity);
     if (minIdx < 0) minIdx = rOrder.length - 1;
 
     var rewarded = null;
@@ -242,33 +275,42 @@
         break;
       }
     }
-
-    // If nothing matched (unlikely), grant a common
     if (!rewarded) {
       var fallback = D().characters[0];
       G().grantOwnedCharacter(fallback.id, "normal", 1);
       rewarded = fallback;
     }
 
-    // Show result view
-    var gameView = document.getElementById("mathGameView");
-    var resultView = document.getElementById("mathResultView");
-    var inputEl = document.getElementById("mathAnswerInput");
+    var resultText = document.getElementById("mathResultText");
+    if (resultText) {
+      resultText.textContent = "Claimed " + U().getRarityLabel(rewarded.value, undefined, rewarded.tier).text + " " + rewarded.name + "!";
+    }
+    var choiceRow = document.getElementById("mathRewardChoice");
+    if (choiceRow) choiceRow.classList.add("hidden");
 
-    if (gameView) gameView.classList.add("hidden");
-    if (resultView) resultView.classList.remove("hidden");
-    if (inputEl) inputEl.disabled = true;
+    G().fullRender();
+    UI().setStatus("Math challenge: claimed brainrot — " + rewarded.name);
+    pendingRewardRarity = null;
+    pendingRewardCount = 0;
+    pendingTokenCount = 0;
+  }
+
+  function claimTokenReward() {
+    if (pendingTokenCount <= 0) return;
+    S().getState().mathTokens = (S().getState().mathTokens || 0) + pendingTokenCount;
 
     var resultText = document.getElementById("mathResultText");
     if (resultText) {
-      resultText.textContent = "You answered " + count + " questions correctly and earned a " + rarityLabel + " " + rewarded.name + "!";
+      resultText.textContent = "Claimed " + pendingTokenCount + " math token" + (pendingTokenCount !== 1 ? "s" : "") + "!";
     }
-
-    // Start cooldown countdown display
-    startCooldownDisplay();
+    var choiceRow = document.getElementById("mathRewardChoice");
+    if (choiceRow) choiceRow.classList.add("hidden");
 
     G().fullRender();
-    UI().setStatus("Math challenge: " + count + " correct → " + rarityLabel + " " + rewarded.name);
+    UI().setStatus("Math challenge: claimed " + pendingTokenCount + " tokens. Use on purchases.");
+    pendingRewardRarity = null;
+    pendingRewardCount = 0;
+    pendingTokenCount = 0;
   }
 
   /* ---------- Submit answer ---------- */
@@ -398,6 +440,8 @@
 
     UI().bindClick(document.getElementById("mathStartButton"), startGame);
     UI().bindClick(document.getElementById("mathSubmitButton"), submitAnswer);
+    UI().bindClick(document.getElementById("mathClaimBrainrotButton"), claimBrainrotReward);
+    UI().bindClick(document.getElementById("mathClaimTokensButton"), claimTokenReward);
 
     // Submit on Enter key
     var inputEl = document.getElementById("mathAnswerInput");

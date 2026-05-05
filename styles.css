@@ -448,6 +448,17 @@ body.event-radioactive .admin-input::placeholder {
   animation: accentPulse 3s ease-in-out infinite;
 }
 
+.stat-pill.math-token-pill {
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.20), rgba(0, 180, 90, 0.12));
+  border-color: rgba(0, 230, 118, 0.32);
+  color: var(--ink);
+}
+
+.stat-pill.math-token-pill:hover {
+  border-color: rgba(0, 255, 140, 0.45);
+  box-shadow: 0 0 18px rgba(0, 230, 118, 0.20);
+}
+
 @keyframes accentPulse {
   0%, 100% { box-shadow: 0 0 10px rgba(180, 71, 234, 0.20); }
   50%      { box-shadow: 0 0 22px rgba(255, 45, 149, 0.35), 0 0 36px rgba(180, 71, 234, 0.15); }
@@ -681,6 +692,21 @@ body.event-radioactive .admin-input::placeholder {
   color: var(--ink);
 }
 
+.viewer-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.sell-button {
+  flex: 1;
+  background: linear-gradient(135deg, #cc3300, #ff4422);
+  border-color: rgba(255, 68, 34, 0.35);
+  font-size: 0.85rem;
+  padding: 10px 14px;
+}
+.sell-button:hover { box-shadow: 0 0 22px rgba(255, 68, 34, 0.45); }
+
 .owned-viewer-inline {
   grid-column: 1 / -1;
   margin: 0 0 8px 0;
@@ -803,24 +829,41 @@ body.event-radioactive .admin-input::placeholder {
 /* --- Trait tags --- */
 
 .trait-tag {
+  color: #999;
+  background: rgba(120, 120, 130, 0.20);
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  text-shadow: none;
+}
+
+.trait-tag.rainbow {
   color: #fff;
   background: linear-gradient(135deg, #ff3f81, #ff9d00, #18b8ff, #58d84f);
   background-size: 200% 200%;
   animation: rainbowShift 4s ease infinite;
+  font-size: 0.7rem;
+  padding: 6px 12px;
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
 }
 
 .trait-tag.radioactive {
-  background: linear-gradient(135deg, #f32f3b, #7a1b92, #27b55f, #7d562d);
+  color: #e8f5e9;
+  background: linear-gradient(135deg, #5d4037, #795548, #388e3c, #4caf50);
   background-size: 200% 200%;
   animation: rainbowShift 5s ease infinite;
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  text-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
 }
 
 .trait-tag.diamond {
-  background: linear-gradient(135deg, #1e90ff, #87ceeb, #e0f0ff, #4169e1);
+  color: #fff;
+  background: linear-gradient(135deg, #1565c0, #42a5f5, #e3f2fd, #ffffff);
   background-size: 200% 200%;
   animation: rainbowShift 4s ease infinite;
-  text-shadow: 0 0 8px rgba(135, 206, 235, 0.7);
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
 .trait-tag.hidden { display: none; }
@@ -1416,6 +1459,18 @@ body.event-radioactive .admin-input::placeholder {
   color: var(--ink);
   margin: 0 0 12px;
   text-shadow: 0 0 8px rgba(0, 230, 118, 0.20);
+}
+
+.math-reward-choice {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .math-reward-choice {
+    flex-direction: column;
+  }
 }
 
 /* --- Admin panel --- */

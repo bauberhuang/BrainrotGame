@@ -241,6 +241,24 @@ function getOrdinalSuffix(value) {
   }
 }
 
+/* ---------- Inventory slots ---------- */
+
+function getMaxSlots(rebirthCount) {
+  return 10 + rebirthCount;
+}
+
+function getUsedSlots(state) {
+  var total = 0;
+  var keys = ["normalCount", "rainbowCount", "diamondCount", "radioactiveCount"];
+  for (var id in state.owned) {
+    var entry = state.owned[id];
+    for (var k = 0; k < keys.length; k++) {
+      if (entry[keys[k]] > 0) total += 1; // one slot per mutation group
+    }
+  }
+  return total;
+}
+
 /* ---------- Misc helpers ---------- */
 
 function isCutoutCharacterImage(character) {
@@ -314,6 +332,8 @@ window.GameUtils = {
   getNextRebirthMultiplier,
   getRebirthRequirement,
   getOrdinalSuffix,
+  getMaxSlots,
+  getUsedSlots,
   isCutoutCharacterImage,
   getOwnedCharacterData,
   isKnownCharacterId,

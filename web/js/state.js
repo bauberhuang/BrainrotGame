@@ -10,7 +10,8 @@ let state = createDefaultState();
 
 function createDefaultState() {
   return {
-    money: 10,
+    money: 10000,
+    mathTokens: 0,
     currentRoll: null,
     owned: { "noobini-pizzanini": { id: "noobini-pizzanini", normalCount: 1, rainbowCount: 0, radioactiveCount: 0, diamondCount: 0 } },
     rebirthCount: 0,
@@ -91,7 +92,8 @@ function normalizeLoadedState(parsed) {
   }
   var evt = parsed.event || {};
   return {
-    money: Number(parsed.money) || 10,
+    money: Number(parsed.money) || 10000,
+    mathTokens: Math.max(0, Number(parsed.mathTokens) || 0),
     currentRoll: normalizeCurrentRoll(parsed.currentRoll),
     owned: normalizedOwned,
     rebirthCount: Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, Number(parsed.rebirthCount) || 0)),
