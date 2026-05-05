@@ -9,6 +9,29 @@ from typing import Tuple
 
 PROJECT_ROOT = Path(__file__).parent
 DB_PATH = PROJECT_ROOT / "accounts.db"
+GAME_DATA_PATH = PROJECT_ROOT / "game_data.json"
+
+# Load game data once at startup
+with open(GAME_DATA_PATH, "r", encoding="utf-8") as f:
+    _gd = json.load(f)
+
+CHARACTERS = _gd["characters"]
+LUCKY_BLOCK_CHARACTERS = _gd["luckyBlockCharacters"]
+ADMIN_ONLY_CHARACTERS = _gd["adminOnlyCharacters"]
+SAILING_BOATS = _gd["sailingBoats"]
+SAILING_ISLANDS = _gd["sailingIslands"]
+MUTATIONS = _gd["mutations"]
+EVENT_MUTATION_WEIGHTS = _gd["eventMutationWeights"]
+PLAYTIME_MILESTONES = _gd["playtimeMilestones"]
+CONSTANTS = _gd["constants"]
+CHARACTER_BY_ID = _gd["characterById"]
+LUCKY_BLOCK_BY_ID = _gd["luckyBlockById"]
+SAILING_ISLAND_BY_ID = _gd["sailingIslandById"]
+SAILING_BOAT_BY_ID = _gd["sailingBoatById"]
+TOTAL_CHARACTER_VALUE = _gd["totalCharacterValue"]
+DEFAULT_LUCKY_BLOCK_IDS = _gd["defaultLuckyBlockIds"]
+SAILING_REWARD_CHARACTERS = _gd["sailingRewardCharacters"]
+SAILING_REWARD_BY_ID = _gd["sailingRewardById"]
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +110,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             "/api/settings/password": self._handle_change_password,
             "/api/save": self._handle_save,
             "/api/load": self._handle_load,
+            "/api/game-data": self._handle_game_data,
         }
 
         handler = routes.get(path)
@@ -94,6 +118,28 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             handler(data)
         else:
             self._json_reply(404, {"ok": False, "error": "Not Found"})
+
+    def _handle_game_data(self, _data: dict) -> None:
+        """Serve all game data as a single JSON blob."""
+        self._json_reply(200, {
+            "characters": CHARACTERS,
+            "luckyBlockCharacters": LUCKY_BLOCK_CHARACTERS,
+            "adminOnlyCharacters": ADMIN_ONLY_CHARACTERS,
+            "sailingBoats": SAILING_BOATS,
+            "sailingIslands": SAILING_ISLANDS,
+            "mutations": MUTATIONS,
+            "eventMutationWeights": EVENT_MUTATION_WEIGHTS,
+            "playtimeMilestones": PLAYTIME_MILESTONES,
+            "constants": CONSTANTS,
+            "characterById": CHARACTER_BY_ID,
+            "luckyBlockById": LUCKY_BLOCK_BY_ID,
+            "sailingIslandById": SAILING_ISLAND_BY_ID,
+            "sailingBoatById": SAILING_BOAT_BY_ID,
+            "totalCharacterValue": TOTAL_CHARACTER_VALUE,
+            "defaultLuckyBlockIds": DEFAULT_LUCKY_BLOCK_IDS,
+            "sailingRewardCharacters": SAILING_REWARD_CHARACTERS,
+            "sailingRewardById": SAILING_REWARD_BY_ID,
+        })
 
     # ---- helpers ----
 

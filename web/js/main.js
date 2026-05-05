@@ -155,43 +155,55 @@
   UI().bindClick(UI().dom.uncoverLuckyBlockButton, () => G().uncoverLuckyBlock());
   UI().bindClick(UI().dom.uncoverAllLuckyBlocksButton, () => G().uncoverAllLuckyBlocks());
 
-  // 3. Load game state
-  S().replaceState(S().loadState());
-  S().setAdminAuthorized(S().loadAdminAuthorization());
+  // 3. Load game state (server first if logged in, fall back to localStorage)
+  async function initGameState() {
+    var loaded = false;
+    if (window.Account && window.Account.isLoggedIn()) {
+      var serverState = await S().loadStateFromServer();
+      if (serverState) {
+        S().replaceState(serverState);
+        loaded = true;
+      }
+    }
+    if (!loaded) {
+      S().replaceState(S().loadState());
+    }
+    S().setAdminAuthorized(S().loadAdminAuthorization());
 
-  // Safety net: if no brainrots owned, grant starter
-  var st = S().getState();
-  if (Object.keys(st.owned).length === 0) {
-    st.owned["noobini-pizzanini"] = S().normalizeOwnedEntry("noobini-pizzanini", { normalCount: 1 });
+    // Safety net: if no brainrots owned, grant starter
+    var st = S().getState();
+    if (Object.keys(st.owned).length === 0) {
+      st.owned["noobini-pizzanini"] = S().normalizeOwnedEntry("noobini-pizzanini", { normalCount: 1 });
+    }
+
+    // 4. Award offline income and initialize
+    G().awardOfflineIncome();
+    G().syncEventState();
+    if (typeof window.Sailing !== "undefined" && window.Sailing.resolveFinished) {
+      window.Sailing.resolveFinished();
+    }
+    G().ensureCurrentRoll();
+
+    // 5. Compute initial income before first render
+    window._totalIncomePerSecond = G().getTotalIncomePerSecond();
+
+    // 6. Initial page render based on URL hash
+    handleHashChange();
   }
 
-  // 4. Award offline income and initialize
-  G().awardOfflineIncome();
-  G().syncEventState();
-  if (typeof window.Sailing !== "undefined" && window.Sailing.resolveFinished) {
-    window.Sailing.resolveFinished();
-  }
-  G().ensureCurrentRoll();
-
-  // 5. Compute initial income before first render
-  window._totalIncomePerSecond = G().getTotalIncomePerSecond();
-
-  // 6. Initial page render based on URL hash
-  handleHashChange();
+  initGameState();
 
   // 7. Start game loop (1 tick per second)
   window.setInterval(() => {
     G().tickIncome();
   }, 1000);
 
-  // 8. Auto-save to server every 30s for logged-in users
+  // 8. Sync state to Python/SQLite server every 30s
   window.setInterval(() => {
-    if (window.Account && window.Account.isLoggedIn()) {
-      window.Account.saveToServer();
-    }
+    S().syncStateToServer();
   }, 30000);
 
-  // 7. Set initial status
+  // 9. Set initial status
   UI().setStatus("Your idle run started with $10. Roll and build your brainrot factory.");
   UI().setRebirthStatus("Stack rebirths to push every brainrot income higher.");
 

@@ -92,10 +92,14 @@
       setLoggedInUser(username);
       updateButtonLabel();
 
-      // If server has save data, load it
+      // If server has save data, load it (normalized)
       if (result.saveData) {
-        S().replaceState(result.saveData);
+        var norm = S().normalizeLoadedState(result.saveData);
+        S().replaceState(norm);
         S().saveState(); // persist to localStorage too
+      } else {
+        // New account — push current local state to server
+        S().syncStateToServer();
       }
 
       if (statusEl) {

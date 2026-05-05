@@ -83,33 +83,58 @@ function normalizeSailingState(sailing) {
 
 var SAVE_KEY = D().CONST.SAVE_KEY_PREFIX;
 
+// Parse raw state from localStorage or raw JSON
+function normalizeLoadedState(parsed) {
+  var normalizedOwned = {};
+  for (var id in (parsed.owned || {})) {
+    normalizedOwned[id] = normalizeOwnedEntry(id, parsed.owned[id]);
+  }
+  var evt = parsed.event || {};
+  return {
+    money: Number(parsed.money) || 10,
+    currentRoll: normalizeCurrentRoll(parsed.currentRoll),
+    owned: normalizedOwned,
+    rebirthCount: Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, Number(parsed.rebirthCount) || 0)),
+    sailing: normalizeSailingState(parsed.sailing),
+    event: {
+      activeMutation: D().MUTATIONS[evt.activeMutation] ? evt.activeMutation : null,
+      endsAt: Number(evt.endsAt) || 0,
+      playSeconds: Math.max(0, Number(evt.playSeconds) || 0),
+    },
+    totalPlaySeconds: Math.max(0, Number(parsed.totalPlaySeconds) || 0),
+    lastClaimedMilestoneIdx: parsed.lastClaimedMilestoneIdx != null ? Number(parsed.lastClaimedMilestoneIdx) : -1,
+    lastTick: Number(parsed.lastTick) || Date.now(),
+  };
+}
+
 function loadState() {
   try {
     var raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return createDefaultState();
-    var parsed = JSON.parse(raw);
-    var normalizedOwned = {};
-    for (var id in (parsed.owned || {})) {
-      normalizedOwned[id] = normalizeOwnedEntry(id, parsed.owned[id]);
-    }
-    var evt = parsed.event || {};
-    return {
-      money: Number(parsed.money) || 10,
-      currentRoll: normalizeCurrentRoll(parsed.currentRoll),
-      owned: normalizedOwned,
-      rebirthCount: Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, Number(parsed.rebirthCount) || 0)),
-      sailing: normalizeSailingState(parsed.sailing),
-      event: {
-        activeMutation: D().MUTATIONS[evt.activeMutation] ? evt.activeMutation : null,
-        endsAt: Number(evt.endsAt) || 0,
-        playSeconds: Math.max(0, Number(evt.playSeconds) || 0),
-      },
-      totalPlaySeconds: Math.max(0, Number(parsed.totalPlaySeconds) || 0),
-      lastClaimedMilestoneIdx: parsed.lastClaimedMilestoneIdx != null ? Number(parsed.lastClaimedMilestoneIdx) : -1,
-      lastTick: Number(parsed.lastTick) || Date.now(),
-    };
+    return normalizeLoadedState(JSON.parse(raw));
   } catch (e) {
     return createDefaultState();
+  }
+}
+
+// Load state from Python/SQLite server (for logged-in users)
+async function loadStateFromServer() {
+  var username = (window.Account && window.Account.getLoggedInUser()) || null;
+  if (!username) return null;
+
+  try {
+    var resp = await fetch("/api/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username }),
+    });
+    var result = await resp.json();
+    if (result.ok && result.saveData) {
+      return normalizeLoadedState(result.saveData);
+    }
+    return null;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -119,6 +144,26 @@ function saveState() {
       ...state,
       lastTick: Date.now(),
     }));
+  } catch (e) { /* ignore */ }
+}
+
+// Push current state to Python/SQLite server (debounced — call every 30s)
+var _serverSavePending = false;
+function syncStateToServer() {
+  var username = (window.Account && window.Account.getLoggedInUser()) || null;
+  if (!username) return;
+
+  // Fire-and-forget: don't block the game loop
+  var payload = JSON.stringify({
+    username: username,
+    saveData: state,
+  });
+  try {
+    fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+    });
   } catch (e) { /* ignore */ }
 }
 
@@ -155,6 +200,9 @@ window.GameState = {
   replaceState,
   loadState,
   saveState,
+  loadStateFromServer,
+  syncStateToServer,
+  normalizeLoadedState,
   // normalization
   normalizeOwnedEntry,
   normalizeCurrentRoll,
