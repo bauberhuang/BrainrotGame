@@ -250,36 +250,71 @@ function renderOwned(selectedOwnedCharacterId) {
       var cardId = entry.id + "|" + mut.key;
       var sel = selectedOwnedCharacterId === cardId;
 
+      // Build tooltip HTML data as attributes on the card
+      var tooltipHTML = '';
+      tooltipHTML += '<div class="compact-viewer" style="display:flex;gap:14px;align-items:flex-start;">';
+      tooltipHTML += '<div class="viewer-frame"><img src="' + (ch.img || '') + '" alt="" /></div>';
+      tooltipHTML += '<div style="flex:1;">';
+      tooltipHTML += '<h3 class="viewer-name">' + ch.name + '</h3>';
+      tooltipHTML += '<span class="rarity-tag ' + rarity.className + '">' + rarity.text + '</span>';
+      tooltipHTML += '<span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '" style="margin-left:4px;">' + mut.label + '</span>';
+      tooltipHTML += '<p class="flavor" style="margin:6px 0;font-size:0.85rem;">' + (ch.flavor || '') + '</p>';
+      tooltipHTML += '<div class="viewer-stats">';
+      tooltipHTML += '<span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(ch.cost) + '</strong></span>';
+      tooltipHTML += '<span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(baseIncome * mut.mult) + '/s</strong></span>';
+      tooltipHTML += '</div>';
+      tooltipHTML += '</div></div>';
+
+      // URL-encode the tooltip HTML for safe storage in data attribute
+      var encoded = encodeURIComponent(tooltipHTML);
+
       cards.push(
-        '<article onclick="window.Game.selectOwnedCard(this)" class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + cardId + '">',
+        '<article class="owned-card' + (sel ? ' selected' : '') + '" data-owned-id="' + cardId + '" data-tooltip="' + encoded + '"',
+        ' onmouseenter="window.GameUI.showFloatingViewer(this,event)" onmouseleave="window.GameUI.hideFloatingViewer()"',
+        ' onclick="window.Game.selectOwnedCard(this)">',
         '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + (mut.css ? ' mutation-' + mut.css : '') + '" src="' + (ch.img || '') + '" alt="" />',
         '<div><p class="owned-name">' + ch.name + '</p>',
         '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span> ×' + count + '</p>',
         '<p class="owned-meta">' + U().formatMoney(baseIncome * mut.mult) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
+        '<button class="sell-mini-btn" onclick="event.stopPropagation();window.Game.sellOwnedCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" title="Sell">−</button>',
         '</article>');
-
-      // Viewer panel for selected mutation card
-      if (sel) {
-        var vch = ch, vinc = baseIncome * mut.mult;
-        cards.push(
-          '<div class="viewer-panel">',
-          '<div class="panel-title-row"><h2>View Brainrot</h2></div>',
-          '<article class="sprite-card compact-viewer">',
-          '<div class="sprite-frame viewer-frame"><img src="' + (vch.img || '') + '" alt="" /></div>',
-          '<div class="sprite-copy">',
-          '<h3 class="viewer-name">' + vch.name + '</h3>',
-          '<span class="rarity-tag ' + rarity.className + '">' + rarity.text + '</span>',
-          '<span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '" style="margin-left:6px;">' + mut.label + '</span>',
-          '<p class="flavor">' + (vch.flavor || '') + '</p>',
-          '<div class="viewer-stats"><span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(vch.cost) + '</strong></span><span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(vinc) + '/s</strong></span></div>',
-          '<div class="viewer-actions"><button class="game-button roll sell-button" onclick="window.Game.sellOwnedCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" type="button">Sell One (50% refund)</button></div>',
-          '</div>',
-          '</article>',
-          '</div>');
-      }
     }
   }
   dom.ownedList.innerHTML = cards.join('');
+}
+
+var _hoverTimer = null;
+
+function showFloatingViewer(cardEl, event) {
+  if (_hoverTimer) clearTimeout(_hoverTimer);
+  _hoverTimer = setTimeout(function () {
+    if (!document.contains(cardEl)) return; // card was removed from DOM
+    var tooltip = cardEl.getAttribute("data-tooltip");
+    if (!tooltip) return;
+    var body = document.getElementById("floatingViewerBody");
+    var viewer = document.getElementById("floatingViewer");
+    if (body) body.innerHTML = decodeURIComponent(tooltip);
+    if (viewer) {
+      // Position near the card
+      var rect = cardEl.getBoundingClientRect();
+      var vw = window.innerWidth;
+      var left = rect.right + 14;
+      if (left + 400 > vw) left = rect.left - 400 - 14;
+      if (left < 8) left = 8;
+      var top = rect.top;
+      if (top + 300 > window.innerHeight) top = window.innerHeight - 310;
+      if (top < 8) top = 8;
+      viewer.style.left = left + "px";
+      viewer.style.top = top + "px";
+      viewer.classList.remove("hidden");
+    }
+  }, 500);
+}
+
+function hideFloatingViewer() {
+  if (_hoverTimer) clearTimeout(_hoverTimer);
+  var viewer = document.getElementById("floatingViewer");
+  if (viewer) viewer.classList.add("hidden");
 }
 
 function renderOwnedViewer(selectedOwnedCharacterId) {
@@ -330,4 +365,6 @@ window.GameUI = {
   fullRender,
   renderPlaytimeRewards,
   bindClick,
+  showFloatingViewer,
+  hideFloatingViewer,
 };

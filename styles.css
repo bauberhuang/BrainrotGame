@@ -707,6 +707,116 @@ body.event-radioactive .admin-input::placeholder {
 }
 .sell-button:hover { box-shadow: 0 0 22px rgba(255, 68, 34, 0.45); }
 
+/* --- Floating viewer tooltip --- */
+
+.floating-viewer {
+  position: fixed;
+  z-index: 10000;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  padding: 16px 18px;
+  border: 1px solid var(--purple-bright);
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(20, 14, 50, 0.96), rgba(16, 12, 44, 0.92));
+  box-shadow:
+    0 0 30px rgba(180, 71, 234, 0.40),
+    0 0 60px rgba(100, 200, 255, 0.15),
+    0 12px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: viewerFadeIn 0.2s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes viewerFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.floating-viewer::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent, var(--purple-bright), var(--pink-bright), var(--sky-bright), transparent);
+  background-size: 200% 100%;
+  animation: neonBorderFlow 5s linear infinite;
+  border-radius: 20px 20px 0 0;
+  pointer-events: none;
+}
+
+.floating-viewer .panel-title-row h2 {
+  font-size: 1rem;
+}
+
+.floating-viewer-body {
+  margin-top: 10px;
+}
+
+.floating-viewer-body .compact-viewer {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.floating-viewer-body .viewer-frame {
+  flex: 0 0 120px;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.floating-viewer-body .viewer-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.floating-viewer-body .viewer-name {
+  font-size: 1.1rem;
+  margin: 0 0 6px;
+}
+
+.floating-viewer-body .viewer-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.floating-viewer-body .viewer-stat {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+
+.floating-viewer-body .viewer-stat span {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.floating-viewer-body .viewer-stat strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .floating-viewer {
+    width: calc(100vw - 24px);
+    left: 12px !important;
+    right: 12px !important;
+  }
+}
+
 .owned-viewer-inline {
   grid-column: 1 / -1;
   margin: 0 0 8px 0;
@@ -1593,6 +1703,29 @@ body.event-radioactive .admin-input::placeholder {
   color: var(--ink-dim);
 }
 
+.sell-mini-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 68, 34, 0.35);
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(200, 50, 20, 0.7), rgba(255, 70, 40, 0.5));
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.sell-mini-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(255, 68, 34, 0.50);
+}
+.sell-mini-btn:active { transform: scale(0.95); }
+
 .owned-income {
   text-align: right;
   font-weight: 700;
@@ -1811,7 +1944,8 @@ body.event-radioactive .admin-input::placeholder {
   }
 
   .owned-card {
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr) 26px;
+    gap: 8px;
   }
 
   .owned-income {
