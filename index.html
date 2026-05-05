@@ -33,25 +33,9 @@
           <span class="label">Playtime</span>
           <strong id="totalPlaytimeDisplay">0s</strong>
         </div>
-        <button class="stat-pill accent stat-button rebirth-launch" id="rebirthPageButton" type="button">
-          <span class="label">Rebirth</span>
-          <strong>Open Rebirth</strong>
-        </button>
-        <button class="stat-pill stat-button admin-launch" id="adminAuthButton" type="button">
-          <span class="label">Admin</span>
-          <strong>Admin Auth</strong>
-        </button>
-        <button class="stat-pill stat-button sailing-launch" id="sailingPageButton" type="button">
-          <span class="label">Sailing</span>
-          <strong>Open Sailing</strong>
-        </button>
-        <button class="stat-pill stat-button math-launch" id="mathPageButton" type="button">
-          <span class="label">Math</span>
-          <strong>Brainrot Math</strong>
-        </button>
-        <button class="stat-pill stat-button account-launch" id="accountPageButton" type="button">
-          <span class="label">Account</span>
-          <strong id="accountButtonLabel">Sign In</strong>
+        <button class="stat-pill accent stat-button settings-launch" id="settingsPageButton" type="button">
+          <span class="label">Settings</span>
+          <strong>Open Settings</strong>
         </button>
       </div>
     </header>
@@ -124,6 +108,56 @@
         </div>
         <div class="owned-list" id="ownedList"></div>
       </aside>
+    </section>
+
+    <!-- ===== SETTINGS PAGE ===== -->
+    <section class="rebirth-page hidden" id="settingsPage">
+      <article class="rebirth-panel settings-panel">
+        <div class="panel-title-row">
+          <div>
+            <p class="eyebrow">Brainrot Settings</p>
+            <h2>Settings</h2>
+          </div>
+          <button class="back-button" id="settingsBackButton" type="button">Back</button>
+        </div>
+        <div class="settings-list">
+          <div class="settings-group">
+            <button class="settings-row" onclick="UI().navigateTo('rebirth')">
+              <span class="settings-row-icon">🔄</span>
+              <span class="settings-row-label">Rebirth</span>
+              <span class="settings-row-value" id="settingsRebirthBadge">0</span>
+              <span class="settings-row-chevron">›</span>
+            </button>
+          </div>
+          <div class="settings-group">
+            <button class="settings-row" onclick="UI().navigateTo('sailing')">
+              <span class="settings-row-icon">⛵</span>
+              <span class="settings-row-label">Sailing</span>
+              <span class="settings-row-value" id="settingsSailingBadge"></span>
+              <span class="settings-row-chevron">›</span>
+            </button>
+            <button class="settings-row" onclick="UI().navigateTo('math')">
+              <span class="settings-row-icon">🧮</span>
+              <span class="settings-row-label">Math Challenge</span>
+              <span class="settings-row-value" id="settingsMathBadge"></span>
+              <span class="settings-row-chevron">›</span>
+            </button>
+          </div>
+          <div class="settings-group">
+            <button class="settings-row" onclick="UI().navigateTo('admin')">
+              <span class="settings-row-icon">🔧</span>
+              <span class="settings-row-label">Admin</span>
+              <span class="settings-row-chevron">›</span>
+            </button>
+            <button class="settings-row" onclick="UI().navigateTo('account')">
+              <span class="settings-row-icon">👤</span>
+              <span class="settings-row-label">Account</span>
+              <span class="settings-row-value" id="settingsAccountBadge">Guest</span>
+              <span class="settings-row-chevron">›</span>
+            </button>
+          </div>
+        </div>
+      </article>
     </section>
 
     <!-- ===== REBIRTH PAGE ===== -->

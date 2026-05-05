@@ -1201,6 +1201,108 @@ body.event-radioactive .admin-input::placeholder {
 
 .account-form .game-button { margin-top: 2px; }
 
+/* --- Settings panel (Apple-style) --- */
+
+.settings-panel { min-height: 360px; }
+
+.settings-launch {
+  min-height: 80px;
+  background: linear-gradient(135deg, rgba(140, 140, 160, 0.20), rgba(100, 100, 130, 0.12));
+  border-color: rgba(180, 180, 200, 0.30);
+  color: #fff;
+}
+.settings-launch:hover { box-shadow: 0 0 28px rgba(180, 180, 220, 0.35); }
+
+.settings-list {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row:hover {
+  background: rgba(180, 100, 240, 0.08);
+}
+
+.settings-row:active {
+  background: rgba(180, 100, 240, 0.14);
+}
+
+.settings-row-icon {
+  font-size: 1.3rem;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.settings-row-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.settings-row-value {
+  color: var(--ink-dim);
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.settings-row-chevron {
+  color: rgba(160, 160, 180, 0.5);
+  font-size: 1.4rem;
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+.settings-sub-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  border: none;
+  background: none;
+  color: var(--cyan);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.settings-sub-back:hover {
+  color: var(--sky-bright);
+}
+
 /* --- Math panel --- */
 
 .math-panel { min-height: 360px; }

@@ -37,7 +37,8 @@ function cacheDom() {
     "sailingConfirmButton", "sailingStatusText",
     "playtimeRewardCard", "playtimeRewardLabel", "playtimeRewardButton",
     "totalPlaytimeDisplay",
-    "mathPage", "mathPageButton", "mathBackButton",
+    "mathPage", "mathBackButton",
+    "settingsPage", "settingsPageButton", "settingsBackButton",
   ];
   for (const id of ids) {
     dom[id] = document.querySelector(`#${id}`);
@@ -46,7 +47,7 @@ function cacheDom() {
 
 /* ---------- Page navigation (client-side, no reload) ---------- */
 
-const PAGE_IDS = ["mainPage", "rebirthPage", "adminPage", "sailingPage", "accountPage", "mathPage"];
+const PAGE_IDS = ["mainPage", "settingsPage", "rebirthPage", "adminPage", "sailingPage", "accountPage", "mathPage"];
 
 function showPage(pageName) {
   for (const id of PAGE_IDS) {
@@ -63,6 +64,7 @@ function getPageElement(pageName) {
     case "sailing": return dom.sailingPage;
     case "account": return dom.accountPage;
     case "math": return dom.mathPage;
+    case "settings": return dom.settingsPage;
     default: return dom.mainPage;
   }
 }

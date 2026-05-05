@@ -81,12 +81,34 @@
     // Call the page's boot function (binds events, populates selects, etc.)
     var boots = {
       home: null,
+      settings: function () { return renderSettingsBadges(); },
       admin: function () { return window.Admin && window.Admin.boot(); },
       rebirth: function () { return window.Rebirth && window.Rebirth.boot(); },
       sailing: function () { return window.Sailing && window.Sailing.boot(); },
       account: function () { return window.Account && window.Account.boot(); },
       math: function () { return window.MathGame && window.MathGame.boot(); },
     };
+
+    function renderSettingsBadges() {
+      var st = S().getState();
+      var rebEl = document.getElementById("settingsRebirthBadge");
+      if (rebEl) rebEl.textContent = st.rebirthCount;
+      var accEl = document.getElementById("settingsAccountBadge");
+      if (accEl) accEl.textContent = (window.Account && window.Account.isLoggedIn())
+        ? (window.Account.getLoggedInUser()) : "Guest";
+      var sailEl = document.getElementById("settingsSailingBadge");
+      if (sailEl) sailEl.textContent = st.sailing.jobs.length > 0 ? st.sailing.jobs.length + " active" : "";
+      var mathEl = document.getElementById("settingsMathBadge");
+      if (mathEl && window.MathGame) {
+        var cd = window.MathGame.getCooldownRemaining();
+        if (cd > 0) {
+          var m = Math.ceil(cd / 60000);
+          mathEl.textContent = m + "m cd";
+        } else {
+          mathEl.textContent = "Ready";
+        }
+      }
+    }
 
     if (boots[pageName]) {
       boots[pageName]();
@@ -118,32 +140,20 @@
     }
   }
 
-  bindNav("rebirthPageButton", "rebirth");
-  bindNav("adminAuthButton", "admin");
-  bindNav("sailingPageButton", "sailing");
-  bindNav("accountPageButton", "account");
-  bindNav("mathPageButton", "math");
+  bindNav("settingsPageButton", "settings");
 
-  // Back buttons
-  function bindBack(buttonId) {
+  // Back buttons: sub-page back → settings, settings back → home
+  function bindBackTo(buttonId, pageName) {
     const btn = UI().dom[buttonId];
-    if (btn) btn.addEventListener("click", () => UI().navigateTo("home"));
+    if (btn) btn.addEventListener("click", () => UI().navigateTo(pageName));
   }
 
-  bindBack("backToGameButton");
-  bindBack("adminBackButton");
-  bindBack("sailingBackButton");
-  bindBack("accountBackButton");
-  bindBack("mathBackButton");
-
-  // Update account button label based on login status
-  function updateAccountButtonLabel() {
-    const label = document.getElementById("accountButtonLabel");
-    if (label) {
-      label.textContent = window.Account && window.Account.isLoggedIn() ? "My Account" : "Sign In";
-    }
-  }
-  updateAccountButtonLabel();
+  bindBackTo("settingsBackButton", "home");
+  bindBackTo("backToGameButton", "settings");
+  bindBackTo("adminBackButton", "settings");
+  bindBackTo("sailingBackButton", "settings");
+  bindBackTo("accountBackButton", "settings");
+  bindBackTo("mathBackButton", "settings");
 
   /* ---------- Home page game button bindings ---------- */
 
