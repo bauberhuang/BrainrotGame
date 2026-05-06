@@ -933,8 +933,8 @@ body.event-radioactive .admin-input::placeholder {
 .trait-tag {
   color: #999;
   background: rgba(120, 120, 130, 0.20);
-  font-size: 0.65rem;
-  padding: 4px 8px;
+  font-size: 0.58rem;
+  padding: 2px 6px;
   text-shadow: none;
 }
 
@@ -943,8 +943,8 @@ body.event-radioactive .admin-input::placeholder {
   background: linear-gradient(135deg, #ff3f81, #ff9d00, #18b8ff, #58d84f);
   background-size: 200% 200%;
   animation: rainbowShift 4s ease infinite;
-  font-size: 0.7rem;
-  padding: 6px 12px;
+  font-size: 0.6rem;
+  padding: 3px 8px;
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
 }
 
@@ -953,8 +953,8 @@ body.event-radioactive .admin-input::placeholder {
   background: linear-gradient(135deg, #5d4037, #795548, #388e3c, #4caf50);
   background-size: 200% 200%;
   animation: rainbowShift 5s ease infinite;
-  font-size: 0.7rem;
-  padding: 6px 12px;
+  font-size: 0.6rem;
+  padding: 3px 8px;
   text-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
 }
 
@@ -963,8 +963,8 @@ body.event-radioactive .admin-input::placeholder {
   background: linear-gradient(135deg, #1565c0, #42a5f5, #e3f2fd, #ffffff);
   background-size: 200% 200%;
   animation: rainbowShift 4s ease infinite;
-  font-size: 0.7rem;
-  padding: 6px 12px;
+  font-size: 0.6rem;
+  padding: 3px 8px;
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
@@ -1832,6 +1832,37 @@ body.event-radioactive .admin-input::placeholder {
   flex-shrink: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
+.level-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.22), rgba(0, 180, 90, 0.14));
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  color: #44ffaa;
+  font-size: 0.62rem;
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.level-up-btn {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 130, 80, 0.55), rgba(0, 200, 100, 0.35));
+  color: #44ffaa;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.level-up-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 14px rgba(0, 230, 118, 0.40);
+}
+
 .sell-mini-btn:hover {
   transform: scale(1.15);
   box-shadow: 0 0 12px rgba(255, 68, 34, 0.50);

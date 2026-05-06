@@ -39,14 +39,22 @@ function replaceState(next) { state = next; }
 
 function normalizeOwnedEntry(id, entry) {
   if (!entry) entry = {};
-  const legacyCount = Number(entry.count) || 0;
+  var legacyCount = Number(entry.count) || 0;
   return {
-    id,
+    id: id,
     normalCount: Number(entry.normalCount) || legacyCount,
     rainbowCount: Number(entry.rainbowCount) || 0,
     radioactiveCount: Number(entry.radioactiveCount) || 0,
     diamondCount: Number(entry.diamondCount) || 0,
+    normalLevel: Math.max(0, Math.min(500, Number(entry.normalLevel) || 0)),
+    rainbowLevel: Math.max(0, Math.min(500, Number(entry.rainbowLevel) || 0)),
+    radioactiveLevel: Math.max(0, Math.min(500, Number(entry.radioactiveLevel) || 0)),
+    diamondLevel: Math.max(0, Math.min(500, Number(entry.diamondLevel) || 0)),
   };
+}
+
+function getLevelMultiplier(level) {
+  return 1 + level * 0.1;
 }
 
 function normalizeCurrentRoll(currentRoll) {
@@ -207,6 +215,7 @@ window.GameState = {
   normalizeLoadedState,
   // normalization
   normalizeOwnedEntry,
+  getLevelMultiplier,
   normalizeCurrentRoll,
   normalizeSailingState,
   normalizeSailingJob,

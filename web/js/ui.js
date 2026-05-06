@@ -226,10 +226,10 @@ function renderOwned(selectedOwnedCharacterId) {
   var DIAMOND = D().CONST.DIAMOND_MULTIPLIER;
   var defaultIds = D().defaultLuckyBlockIds;
   var mutOrder = [
-    { key: "normalCount", label: "NORMAL", css: "", mult: 1 },
-    { key: "rainbowCount", label: "RAINBOW", css: "rainbow", mult: RAINBOW },
-    { key: "diamondCount", label: "DIAMOND", css: "diamond", mult: DIAMOND },
-    { key: "radioactiveCount", label: "RADIOACTIVE", css: "radioactive", mult: RADIOACTIVE },
+    { key: "normalCount", levelKey: "normalLevel", label: "NORMAL", css: "", mult: 1 },
+    { key: "rainbowCount", levelKey: "rainbowLevel", label: "RAINBOW", css: "rainbow", mult: RAINBOW },
+    { key: "diamondCount", levelKey: "diamondLevel", label: "DIAMOND", css: "diamond", mult: DIAMOND },
+    { key: "radioactiveCount", levelKey: "radioactiveLevel", label: "RADIOACTIVE", css: "radioactive", mult: RADIOACTIVE },
   ];
   var cards = [];
 
@@ -249,11 +249,14 @@ function renderOwned(selectedOwnedCharacterId) {
       var count = entry[mut.key] || 0;
       if (count <= 0) continue;
 
-      var mutIncome = count * baseIncome * mut.mult;
+      var lvl = entry[mut.levelKey] || 0;
+      var lvlMult = S().getLevelMultiplier(lvl);
+      var eachIncome = baseIncome * mut.mult * lvlMult;
+      var mutIncome = count * eachIncome;
       var cardId = entry.id + "|" + mut.key;
       var sel = selectedOwnedCharacterId === cardId;
 
-      // Build tooltip HTML data as attributes on the card
+      // Build tooltip HTML
       var tooltipHTML = '';
       tooltipHTML += '<div class="compact-viewer" style="display:flex;gap:14px;align-items:flex-start;">';
       tooltipHTML += '<div class="viewer-frame"><img src="' + (ch.img || '') + '" alt="" /></div>';
@@ -261,24 +264,27 @@ function renderOwned(selectedOwnedCharacterId) {
       tooltipHTML += '<h3 class="viewer-name">' + ch.name + '</h3>';
       tooltipHTML += '<span class="rarity-tag ' + rarity.className + '">' + rarity.text + '</span>';
       tooltipHTML += '<span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '" style="margin-left:4px;">' + mut.label + '</span>';
+      if (lvl > 0) tooltipHTML += '<span class="level-badge">Lv.' + lvl + '</span>';
       tooltipHTML += '<p class="flavor" style="margin:6px 0;font-size:0.85rem;">' + (ch.flavor || '') + '</p>';
       tooltipHTML += '<div class="viewer-stats">';
       tooltipHTML += '<span class="viewer-stat"><span>Cost</span><strong>' + U().formatMoney(ch.cost) + '</strong></span>';
-      tooltipHTML += '<span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(baseIncome * mut.mult) + '/s</strong></span>';
+      tooltipHTML += '<span class="viewer-stat"><span>Money/s</span><strong>' + U().formatMoney(eachIncome) + '/s</strong></span>';
       tooltipHTML += '</div>';
       tooltipHTML += '</div></div>';
 
-      // URL-encode the tooltip HTML for safe storage in data attribute
       var encoded = encodeURIComponent(tooltipHTML);
+
+      var levelText = lvl > 0 ? ' <span class="level-badge">Lv.' + lvl + '</span>' : '';
 
       cards.push(
         '<article class="owned-card' + (sel ? ' selected' : '') + (window.Game && window.Game.isSellMode && window.Game.isSellMode() ? ' sell-mode-card' : '') + '" data-owned-id="' + cardId + '" data-tooltip="' + encoded + '"',
         ' onmouseenter="window.GameUI.showFloatingViewer(this,event)" onmouseleave="window.GameUI.hideFloatingViewer()"',
         ' onclick="window.Game.selectOwnedCard(this)">',
         '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + (mut.css ? ' mutation-' + mut.css : '') + '" src="' + (ch.img || '') + '" alt="" />',
-        '<div><p class="owned-name">' + ch.name + '</p>',
+        '<div><p class="owned-name">' + ch.name + levelText + '</p>',
         '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span> ×' + count + '</p>',
-        '<p class="owned-meta">' + U().formatMoney(baseIncome * mut.mult) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
+        '<p class="owned-meta">' + U().formatMoney(eachIncome) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
+        '<button class="level-up-btn" onclick="event.stopPropagation();window.Game.levelUpCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" title="Level Up">⬆' + (lvl < 500 ? U().formatMoney(Math.floor(eachIncome * 4)) : ' MAX') + '</button>',
         '</article>');
     }
   }

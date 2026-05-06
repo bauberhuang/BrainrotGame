@@ -117,6 +117,30 @@ function sellOwnedCharacter(cid, mutKey) {
   fullRender();
 }
 
+function levelUpCharacter(characterId, mutationKey) {
+  var st = S().getState(), entry = st.owned[characterId];
+  if (!entry) return;
+  if (!mutationKey) mutationKey = "normalCount";
+  var levelKey = mutationKey.replace("Count", "Level");
+  var currentLevel = entry[levelKey] || 0;
+  if (currentLevel >= 500) { UI().setStatus("Already max level 500!"); fullRender(); return; }
+
+  var ch = U().getOwnedCharacterData(characterId);
+  var mutMult = U().getMutationConfig(mutationKey.replace("Count", "")).multiplier;
+  var baseInc = ch.income * U().getCashMultiplierForRebirthCount(st.rebirthCount) * mutMult;
+  var lvlMult = S().getLevelMultiplier(currentLevel);
+  var currentIncome = baseInc * lvlMult;
+  var cost = Math.floor(currentIncome * 4);
+
+  if (st.money < cost) { UI().setStatus("Need " + U().formatMoney(cost) + " to level up. You have " + U().formatMoney(st.money) + "."); fullRender(); return; }
+  st.money -= cost;
+  entry[levelKey] = currentLevel + 1;
+
+  var newMult = S().getLevelMultiplier(currentLevel + 1);
+  UI().setStatus(ch.name + " leveled up to Lv." + (currentLevel + 1) + "! Income: " + U().formatMoney(baseInc * lvlMult) + "/s → " + U().formatMoney(baseInc * newMult) + "/s.");
+  fullRender();
+}
+
 function buyCurrentCharacter() {
   var st = S().getState(); ensureCurrentRoll();
   var current = st.currentRoll, ch = D().characterById[current.id];
@@ -151,7 +175,12 @@ function getTotalIncomePerSecond() {
   var total = 0;
   Object.values(st.owned).forEach(function (e) {
     var inc = U().getOwnedCharacterData(e.id).income;
-    total += (e.normalCount * inc + e.rainbowCount * inc * RW + e.radioactiveCount * inc * RC + (e.diamondCount || 0) * inc * DM) * cashMult;
+    total += (
+      e.normalCount * inc * S().getLevelMultiplier(e.normalLevel || 0) +
+      e.rainbowCount * inc * RW * S().getLevelMultiplier(e.rainbowLevel || 0) +
+      e.radioactiveCount * inc * RC * S().getLevelMultiplier(e.radioactiveLevel || 0) +
+      (e.diamondCount || 0) * inc * DM * S().getLevelMultiplier(e.diamondLevel || 0)
+    ) * cashMult;
   });
   return total;
 }
@@ -335,7 +364,7 @@ window.Game = {
   getSelectedOwnedCharacterId: getSelectedOwnedCharacterId, setSelectedOwnedCharacterId: setSelectedOwnedCharacterId,
   weightedRoll: weightedRoll, createRolledCharacter: createRolledCharacter, ensureCurrentRoll: ensureCurrentRoll,
   getManualRollCost: getManualRollCost, setNewRoll: setNewRoll, rollCharacter: rollCharacter, autoRollCharacter: autoRollCharacter,
-  grantOwnedCharacter: grantOwnedCharacter, sellOwnedCharacter: sellOwnedCharacter, buyCurrentCharacter: buyCurrentCharacter,
+  grantOwnedCharacter: grantOwnedCharacter, sellOwnedCharacter: sellOwnedCharacter, levelUpCharacter: levelUpCharacter, buyCurrentCharacter: buyCurrentCharacter,
   getTotalIncomePerSecond: getTotalIncomePerSecond, awardOfflineIncome: awardOfflineIncome,
   syncEventState: syncEventState, maybeStartMutationEvent: maybeStartMutationEvent, getMutationChance: getMutationChance,
   getLuckyBlockInventory: getLuckyBlockInventory, rollLuckyBlockCharacter: function () { return U().rollByWeight(U().getLuckyBlockPool(D().defaultLuckyBlockIds), "luckyBlockValue"); },
