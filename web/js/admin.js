@@ -1,209 +1,274 @@
 /* ================================================================
-   admin.js — Admin panel: auth, spawn, set money/rebirth/event
+   admin.js — Admin panel: auth, spawn, money, tokens, events
+   Refactored with quick actions and clean structure.
    ================================================================ */
 
-window.Admin = (() => {
-  const D = () => window.GameData;
-  const U = () => window.GameUtils;
-  const S = () => window.GameState;
-  const UI = () => window.GameUI;
-  const G = () => window.Game;
-  let bound = false;
+window.Admin = (function () {
+  var D = function () { return window.GameData; };
+  var U = function () { return window.GameUtils; };
+  var S = function () { return window.GameState; };
+  var G = function () { return window.Game; };
+  var $ = function (id) { return document.getElementById(id); };
+  var bound = false;
 
-  /* ---------- Helpers ---------- */
+  var ADMIN_WHITELIST = ["Bauber666"];
 
+  function isWhitelisted() {
+    var user = (window.Account && window.Account.getLoggedInUser()) || "";
+    return ADMIN_WHITELIST.indexOf(user) !== -1;
+  }
+
+  function isBauber() { return isWhitelisted(); }
+
+  /* ---------- Status helpers ---------- */
+  function status(msg) { var el = $("adminStatusText"); if (el) el.textContent = msg; }
+  function spawnStatus(msg) { var el = $("adminSpawnerStatusText"); if (el) el.textContent = msg; }
+
+  /* ---------- Spawnables list ---------- */
   function getSpawnables() {
-    const combined = [
-      ...D().characters,
-      ...D().luckyBlockCharacters,
-      ...D().sailingRewardCharacters,
-      ...D().adminOnlyCharacters,
-    ];
-    const seen = new Set();
-    const unique = [];
-    for (const entry of combined) {
-      if (!seen.has(entry.id)) {
-        seen.add(entry.id);
-        unique.push(entry);
-      }
-    }
-    return unique.sort((a, b) => {
-      if (a.adminOnly && !b.adminOnly) return -1;
-      if (!a.adminOnly && b.adminOnly) return 1;
-      return a.name.localeCompare(b.name);
+    var seen = {}, unique = [];
+    [D().characters, D().luckyBlockCharacters, D().sailingRewardCharacters, D().adminOnlyCharacters].forEach(function (arr) {
+      arr.forEach(function (c) { if (!seen[c.id]) { seen[c.id] = true; unique.push(c); } });
     });
-  }
-
-  function setStatus(msg) {
-    const d = UI().dom;
-    if (d.adminStatusText) d.adminStatusText.textContent = msg;
-  }
-
-  function setSpawnerStatus(msg) {
-    const d = UI().dom;
-    if (d.adminSpawnerStatusText) d.adminSpawnerStatusText.textContent = msg;
+    unique.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    return unique;
   }
 
   /* ---------- Render ---------- */
-
-  function render() {
-    var d = UI().dom;
-    if (!d.adminPage) return;
-
-    S().setAdminAuthorized(S().loadAdminAuthorization());
-    if (d.adminAuthButton) d.adminAuthButton.classList.remove("hidden");
-    renderView();
-
-    if (!S().getAdminAuthorized()) {
-      setStatus("Enter the admin password to unlock tools.");
-      return;
+  function renderSelects() {
+    var spawnables = getSpawnables();
+    var sel = $("adminBrainrotSelect");
+    if (sel) {
+      var prev = sel.value;
+      sel.innerHTML = spawnables.map(function (c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join("");
+      if (spawnables.some(function (c) { return c.id === prev; })) sel.value = prev;
     }
-
-    // Populate selects
-    const spawnables = getSpawnables();
-    if (d.adminBrainrotSelect) {
-      const prev = d.adminBrainrotSelect.value;
-      d.adminBrainrotSelect.innerHTML = spawnables.map((e) => `<option value="${e.id}">${e.name}</option>`).join("");
-      if (spawnables.some((e) => e.id === prev)) d.adminBrainrotSelect.value = prev;
-      else d.adminBrainrotSelect.value = D().adminOnlyCharacters[0]?.id || spawnables[0]?.id || "";
+    var mut = $("adminMutationSelect");
+    if (mut) {
+      var m = D().MUTATIONS;
+      mut.innerHTML = Object.keys(m).map(function (k, i) { return '<option value="' + k + '">' + (i + 1) + ' ' + m[k].label + '</option>'; }).join("");
     }
-
-    if (d.adminMutationSelect) {
-      d.adminMutationSelect.innerHTML = Object.entries(D().MUTATIONS)
-        .map(([id, mut], i) => `<option value="${id}">${i + 1} ${mut.label}</option>`).join("");
+    var evt = $("adminEventSelect");
+    if (evt) {
+      evt.innerHTML = Object.keys(D().EVENT_MUTATION_WEIGHTS).map(function (k) { return '<option value="' + k + '">' + U().getMutationDisplayName(k) + '</option>'; }).join("");
     }
-
-    if (d.adminEventSelect) {
-      d.adminEventSelect.innerHTML = Object.entries(D().EVENT_MUTATION_WEIGHTS)
-        .map(([id]) => `<option value="${id}">${U().getMutationDisplayName(id)}</option>`).join("");
-    }
-
-    const st = S().getState();
-    if (d.adminSetMoneyInput) d.adminSetMoneyInput.value = `${Math.floor(st.money * 100) / 100}`;
-    if (d.adminSetRebirthInput) d.adminSetRebirthInput.value = `${st.rebirthCount}`;
-    if (d.adminMutationSelect) d.adminMutationSelect.value = d.adminMutationSelect.value || "normal";
-    if (d.adminEventSelect) d.adminEventSelect.value = st.event.activeMutation || "rainbow";
+    var st = S().getState();
+    var mi = $("adminSetMoneyInput"); if (mi) mi.value = Math.floor(st.money);
+    var ri = $("adminSetRebirthInput"); if (ri) ri.value = st.rebirthCount;
+    if (mut) mut.value = mut.value || "normal";
+    if (evt) evt.value = st.event.activeMutation || "rainbow";
   }
 
   function renderView() {
-    const d = UI().dom;
-    const authed = S().getAdminAuthorized();
-    if (d.adminAuthView) d.adminAuthView.classList.toggle("hidden", authed);
-    if (d.adminSpawnerView) d.adminSpawnerView.classList.toggle("hidden", !authed);
+    var authed = S().getAdminAuthorized();
+    var av = $("adminAuthView"), sv = $("adminSpawnerView");
+    if (av) av.classList.toggle("hidden", authed);
+    if (sv) sv.classList.toggle("hidden", !authed);
   }
 
-  /* ---------- Actions ---------- */
+  function isBauber() { return isWhitelisted(); }
 
-  function submitPassword() {
-    const d = UI().dom;
-    if (d.adminPasswordInput.value === D().CONST.ADMIN_PASSWORD) {
-      S().setAdminAuthorized(true);
-      S().saveAdminAuthorization(true);
-      render();
-      setSpawnerStatus("Admin unlocked. Choose mutation, brainrot, and amount.");
-    } else {
-      S().setAdminAuthorized(false);
-      S().saveAdminAuthorization(false);
-      render();
-      setStatus("Wrong password.");
-    }
-  }
-
-  function spawnBrainrots() {
-    const d = UI().dom;
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-
-    const mutation = d.adminMutationSelect.value;
-    const characterId = d.adminBrainrotSelect.value;
-    const amount = Math.max(1, Math.min(1e18, Number(d.adminAmountInput.value) || 1));
-    const ch = U().getOwnedCharacterData(characterId);
-
-    if (!characterId || !U().isKnownCharacterId(characterId)) {
-      setSpawnerStatus("Choose a valid brainrot first.");
+  function render() {
+    if (!$("adminPage")) return;
+    // Not whitelisted — block entirely
+    if (!isWhitelisted()) {
+      var av = $("adminAuthView"), sv = $("adminSpawnerView");
+      if (av) av.classList.add("hidden");
+      if (sv) sv.classList.add("hidden");
+      status("Access denied. Admin is restricted to whitelisted accounts.");
       return;
     }
-
-    G().grantOwnedCharacter(characterId, mutation, amount);
-    G().setSelectedOwnedCharacterId(characterId);
-    G().fullRender();
-    setSpawnerStatus(`Spawned ${amount} ${U().getMutationDisplayName(mutation).toLowerCase()} ${ch.name} into your collection.`);
+    // Whitelisted: auto-auth
+    S().setAdminAuthorized(true); S().saveAdminAuthorization(true);
+    renderView();
+    if (!S().getAdminAuthorized()) { status("Enter the admin password to unlock tools."); return; }
+    renderSelects();
   }
 
-  function setMoney() {
-    const d = UI().dom;
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-    const v = Number.parseFloat(d.adminSetMoneyInput.value);
-    if (Number.isNaN(v)) { setSpawnerStatus("Enter a valid money number."); return; }
-    S().getState().money = Math.max(0, v);
-    G().fullRender();
-    setSpawnerStatus(`Money set to ${U().formatMoney(S().getState().money)}.`);
+  /* ---------- Auth ---------- */
+  function submitPassword() {
+    var pw = $("adminPasswordInput").value;
+    if (pw === D().CONST.ADMIN_PASSWORD) {
+      S().setAdminAuthorized(true); S().saveAdminAuthorization(true);
+      render(); spawnStatus("Admin unlocked.");
+    } else {
+      S().setAdminAuthorized(false); S().saveAdminAuthorization(false);
+      render(); status("Wrong password.");
+    }
   }
 
-  function setRebirth() {
-    const d = UI().dom;
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-    const v = Number.parseInt(d.adminSetRebirthInput.value, 10);
-    if (Number.isNaN(v)) { setSpawnerStatus("Enter a valid rebirth number."); return; }
-    S().getState().rebirthCount = Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, v));
+  /* ---------- Spawn ---------- */
+  function spawnBrainrots() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var mutation = $("adminMutationSelect").value;
+    var cid = $("adminBrainrotSelect").value;
+    var amount = Math.max(1, Math.min(1e18, Number($("adminAmountInput").value) || 1));
+    if (!cid || !U().isKnownCharacterId(cid)) { spawnStatus("Choose a valid brainrot."); return; }
+    var ch = U().getOwnedCharacterData(cid);
+    G().grantOwnedCharacter(cid, mutation, amount);
+    G().setSelectedOwnedCharacterId(cid);
     G().fullRender();
-    setSpawnerStatus(`Rebirth set to ${S().getState().rebirthCount}.`);
-  }
-
-  function setEvent() {
-    const d = UI().dom;
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-    const selected = d.adminEventSelect?.value;
-    if (!selected || !D().EVENT_MUTATION_WEIGHTS[selected]) { setSpawnerStatus("Choose a valid event."); return; }
-    const st = S().getState();
-    st.event.activeMutation = selected;
-    st.event.endsAt = Date.now() + D().CONST.EVENT_DURATION_MS;
-    st.event.playSeconds = 0;
-    G().fullRender();
-    setSpawnerStatus(`${U().getMutationDisplayName(selected)} event turned on for 5 minutes.`);
-  }
-
-  function clearEvent() {
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-    const st = S().getState();
-    st.event.activeMutation = null;
-    st.event.endsAt = 0;
-    st.event.playSeconds = 0;
-    G().fullRender();
-    setSpawnerStatus("Event turned off.");
+    spawnStatus("Spawned " + amount + " " + U().getMutationDisplayName(mutation).toLowerCase() + " " + ch.name + ".");
   }
 
   function spawnAllBrainrots() {
-    if (!S().getAdminAuthorized()) { setStatus("Please enter your password."); return; }
-    var allChars = D().characters;
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
     var count = 0;
-    for (var i = 0; i < allChars.length; i++) {
-      G().grantOwnedCharacter(allChars[i].id, "normal", 1);
-      count++;
-    }
+    D().characters.forEach(function (c) { G().grantOwnedCharacter(c.id, "normal", 1); count++; });
     G().fullRender();
-    setSpawnerStatus("Spawned 1 of each brainrot — " + count + " total added to your collection.");
+    spawnStatus("Spawned 1 of each brainrot — " + count + " total.");
   }
 
-  /* ---------- Bind & boot ---------- */
+  /* ---------- Money & Rebirth ---------- */
+  function setMoney() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var v = Number($("adminSetMoneyInput").value);
+    if (isNaN(v)) { spawnStatus("Enter a valid number."); return; }
+    S().getState().money = Math.max(0, v);
+    G().fullRender();
+    spawnStatus("Money = " + U().formatMoney(S().getState().money));
+  }
 
+  function setRebirth() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var v = parseInt($("adminSetRebirthInput").value, 10);
+    if (isNaN(v)) { spawnStatus("Enter a valid number."); return; }
+    S().getState().rebirthCount = Math.max(0, Math.min(D().CONST.MAX_REBIRTHS, v));
+    G().fullRender();
+    spawnStatus("Rebirth = " + S().getState().rebirthCount);
+  }
+
+  /* ---------- Tokens ---------- */
+  function giveTokens() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var v = parseInt($("adminMathTokensInput").value, 10);
+    if (isNaN(v) || v < 1) { spawnStatus("Enter a valid number."); return; }
+    S().getState().mathTokens = (S().getState().mathTokens || 0) + v;
+    G().fullRender();
+    spawnStatus("+" + v + " tokens. Total: " + S().getState().mathTokens);
+  }
+
+  /* ---------- Events ---------- */
+  function setEvent() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var sel = $("adminEventSelect").value;
+    if (!sel || !D().EVENT_MUTATION_WEIGHTS[sel]) { spawnStatus("Choose a valid event."); return; }
+    var st = S().getState();
+    st.event.activeMutation = sel;
+    st.event.endsAt = Date.now() + D().CONST.EVENT_DURATION_MS;
+    st.event.playSeconds = 0;
+    G().fullRender();
+    spawnStatus(U().getMutationDisplayName(sel) + " event ON — 5 minutes.");
+  }
+
+  function clearEvent() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    S().getState().event = { activeMutation: null, endsAt: 0, playSeconds: 0 };
+    G().fullRender();
+    spawnStatus("Event cleared.");
+  }
+
+  /* ---------- Quick Actions ---------- */
+  function maxMoney() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    S().getState().money = 1e100;
+    G().fullRender();
+    spawnStatus("Money set to MAX (1 GOL).");
+  }
+
+  function fillTokens() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    S().getState().mathTokens = (S().getState().mathTokens || 0) + 1000;
+    G().fullRender();
+    spawnStatus("+1000 tokens. Total: " + S().getState().mathTokens);
+  }
+
+  function clearCollection() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    S().getState().owned = { "noobini-pizzanini": S().normalizeOwnedEntry("noobini-pizzanini", { normalCount: 1 }) };
+    G().fullRender();
+    spawnStatus("Collection cleared. Kept 1 Noobini Pizzanini.");
+  }
+
+  function forceEvent() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var st = S().getState();
+    var sel = $("adminEventSelect").value || "rainbow";
+    st.event.activeMutation = sel;
+    st.event.endsAt = Date.now() + D().CONST.EVENT_DURATION_MS;
+    st.event.playSeconds = D().CONST.EVENT_INTERVAL_SECONDS;
+    G().fullRender();
+    spawnStatus(U().getMutationDisplayName(sel) + " event forced.");
+  }
+
+  function resetGame() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    if (!confirm("Reset ALL progress? This cannot be undone.")) return;
+    S().replaceState(S().createDefaultState());
+    S().saveState();
+    G().fullRender();
+    spawnStatus("Game fully reset.");
+  }
+
+  function exportSave() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var data = JSON.stringify(S().getState(), null, 2);
+    var blob = new Blob([data], { type: "application/json" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "brainrot-save-" + Date.now() + ".json"; a.click();
+    spawnStatus("Save exported.");
+  }
+
+  function importSave() {
+    if (!S().getAdminAuthorized()) { status("Please enter your password."); return; }
+    var input = document.createElement("input"); input.type = "file"; input.accept = ".json";
+    input.onchange = function () {
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var data = JSON.parse(reader.result);
+          S().replaceState(data);
+          S().saveState();
+          G().fullRender();
+          spawnStatus("Save imported!");
+        } catch (e) { spawnStatus("Invalid save file."); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  /* ---------- Bind & Boot ---------- */
   function bind() {
     if (bound) return;
-    const d = UI().dom;
-    UI().bindClick(d.adminPasswordSubmitButton, submitPassword);
-    UI().bindClick(d.adminConfirmButton, spawnBrainrots);
-    UI().bindClick(d.adminSpawnAllButton, spawnAllBrainrots);
-    UI().bindClick(d.adminSetMoneyButton, setMoney);
-    UI().bindClick(d.adminSetRebirthButton, setRebirth);
-    UI().bindClick(d.adminSetEventButton, setEvent);
-    UI().bindClick(d.adminClearEventButton, clearEvent);
-    d.adminPasswordInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") submitPassword(); });
+    var pairs = [
+      ["adminPasswordSubmitButton", submitPassword],
+      ["adminConfirmButton", spawnBrainrots],
+      ["adminSpawnAllButton", spawnAllBrainrots],
+      ["adminSetMoneyButton", setMoney],
+      ["adminSetRebirthButton", setRebirth],
+      ["adminGiveTokensButton", giveTokens],
+      ["adminSetEventButton", setEvent],
+      ["adminClearEventButton", clearEvent],
+      ["adminMaxMoneyButton", maxMoney],
+      ["adminFillTokensButton", fillTokens],
+      ["adminClearCollectionButton", clearCollection],
+      ["adminForceEventButton", forceEvent],
+      ["adminResetGameButton", resetGame],
+      ["adminExportButton", exportSave],
+      ["adminImportButton", importSave],
+    ];
+    pairs.forEach(function (p) {
+      var el = $(p[0]); if (el) el.addEventListener("click", p[1]);
+    });
+    var pw = $("adminPasswordInput");
+    if (pw) pw.addEventListener("keydown", function (e) { if (e.key === "Enter") submitPassword(); });
     bound = true;
   }
 
-  function boot() {
-    bind();
-    render();
-  }
+  function boot() { bind(); render(); }
 
-  return { boot, render };
+  return { boot: boot, render: render, isWhitelisted: isWhitelisted };
 })();

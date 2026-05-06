@@ -11,6 +11,7 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231a0a2e'/><text x='16' y='23' text-anchor='middle' font-size='22'>🧠</text></svg>" />
 </head>
 <body>
   <main class="game-shell">
@@ -137,7 +138,7 @@
         </div>
         <div class="settings-list">
           <div class="settings-group">
-            <button class="settings-row" onclick="UI().navigateTo('rebirth')">
+            <button class="settings-row" onclick="window.GameUI.navigateTo('rebirth')">
               <span class="settings-row-icon">🔄</span>
               <span class="settings-row-label">Rebirth</span>
               <span class="settings-row-value" id="settingsRebirthBadge">0</span>
@@ -145,13 +146,13 @@
             </button>
           </div>
           <div class="settings-group">
-            <button class="settings-row" onclick="UI().navigateTo('sailing')">
+            <button class="settings-row" onclick="window.GameUI.navigateTo('sailing')">
               <span class="settings-row-icon">⛵</span>
               <span class="settings-row-label">Sailing</span>
               <span class="settings-row-value" id="settingsSailingBadge"></span>
               <span class="settings-row-chevron">›</span>
             </button>
-            <button class="settings-row" onclick="UI().navigateTo('math')">
+            <button class="settings-row" onclick="window.GameUI.navigateTo('math')">
               <span class="settings-row-icon">🧮</span>
               <span class="settings-row-label">Math Challenge</span>
               <span class="settings-row-value" id="settingsMathBadge"></span>
@@ -159,12 +160,12 @@
             </button>
           </div>
           <div class="settings-group">
-            <button class="settings-row" onclick="UI().navigateTo('admin')">
+            <button class="settings-row hidden" id="settingsAdminRow" onclick="window.GameUI.navigateTo('admin')">
               <span class="settings-row-icon">🔧</span>
               <span class="settings-row-label">Admin</span>
               <span class="settings-row-chevron">›</span>
             </button>
-            <button class="settings-row" onclick="UI().navigateTo('account')">
+            <button class="settings-row" onclick="window.GameUI.navigateTo('account')">
               <span class="settings-row-icon">👤</span>
               <span class="settings-row-label">Account</span>
               <span class="settings-row-value" id="settingsAccountBadge">Guest</span>
@@ -284,6 +285,32 @@
           <div class="button-row">
             <button class="game-button buy" id="adminSetEventButton" type="button">Set Event</button>
             <button class="game-button roll" id="adminClearEventButton" type="button">Off</button>
+            <button class="game-button buy" id="adminForceEventButton" type="button">Force Now</button>
+          </div>
+
+          <div class="rebirth-info">
+            <div class="rebirth-info-block">
+              <span class="label">Give Math Tokens</span>
+              <input class="admin-input" id="adminMathTokensInput" type="number" min="1" value="1" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="game-button buy" id="adminGiveTokensButton" type="button">Give Tokens</button>
+            <button class="game-button roll" id="adminFillTokensButton" type="button">+1000 Tokens</button>
+          </div>
+
+          <div class="admin-divider"></div>
+          <p class="label">Quick Actions</p>
+          <div class="button-row">
+            <button class="game-button buy" id="adminMaxMoneyButton" type="button">Max Money</button>
+            <button class="game-button roll" id="adminClearCollectionButton" type="button">Clear Collection</button>
+          </div>
+          <div class="button-row">
+            <button class="back-button" id="adminExportButton" type="button">Export Save</button>
+            <button class="back-button" id="adminImportButton" type="button">Import Save</button>
+          </div>
+          <div class="button-row">
+            <button class="game-button rebirth-action" id="adminResetGameButton" type="button" style="flex:1;">Reset Game</button>
           </div>
           <p class="status-text" id="adminSpawnerStatusText">Spawn brainrots directly into your collection.</p>
         </div>

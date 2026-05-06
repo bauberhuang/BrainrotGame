@@ -1,50 +1,10 @@
 /* ================================================================
    data.js — Fetches game data from Python server at load time.
-   Exposes window.GameData (synchronous after initial fetch).
+   Exposes window.GameData plus window.GameDataReady promise.
    ================================================================ */
 
 (function () {
-  // Synchronous XHR — blocks once at startup, cached thereafter
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/game-data", false); // false = synchronous
-  xhr.setRequestHeader("Content-Type", "application/json");
-  try {
-    xhr.send("{}");
-    if (xhr.status === 200) {
-      var d = JSON.parse(xhr.responseText);
-      // Merge PLAYTIME_MILESTONES into CONST (code uses D().CONST.PLAYTIME_MILESTONES)
-      var cnst = d.constants;
-      cnst.PLAYTIME_MILESTONES = d.playtimeMilestones;
-
-      window.GameData = {
-        characters: d.characters,
-        luckyBlockCharacters: d.luckyBlockCharacters,
-        adminOnlyCharacters: d.adminOnlyCharacters,
-        sailingBoats: d.sailingBoats,
-        sailingIslands: d.sailingIslands,
-        mutations: d.mutations,
-        MUTATIONS: d.mutations,
-        EVENT_MUTATION_WEIGHTS: d.eventMutationWeights,
-        CONST: cnst,
-        characterById: d.characterById,
-        luckyBlockCharacterById: d.luckyBlockById,
-        sailingIslandById: d.sailingIslandById,
-        sailingBoatById: d.sailingBoatById,
-        totalCharacterValue: d.totalCharacterValue,
-        defaultLuckyBlockIds: d.defaultLuckyBlockIds,
-        sailingRewardCharacters: d.sailingRewardCharacters,
-        sailingRewardCharacterById: d.sailingRewardById,
-        SAILING_DIAMOND_CHANCE: cnst.SAILING_DIAMOND_CHANCE,
-      };
-      console.log("Game data loaded from Python server (" + d.characters.length + " characters)");
-      return;
-    }
-  } catch (e) {
-    console.error("Failed to load game data from server:", e);
-  }
-
-  // Fallback: empty data (game won't work, but won't crash)
-  console.warn("Using fallback empty game data — server may be down");
+  // Fallback data immediately so D() never crashes
   window.GameData = {
     characters: [],
     luckyBlockCharacters: [],
@@ -65,4 +25,47 @@
     sailingRewardCharacterById: {},
     SAILING_DIAMOND_CHANCE: 0.005,
   };
+
+  function populateFromServer(data) {
+    var cnst = data.constants;
+    cnst.PLAYTIME_MILESTONES = data.playtimeMilestones;
+    window.GameData = {
+      characters: data.characters,
+      luckyBlockCharacters: data.luckyBlockCharacters,
+      adminOnlyCharacters: data.adminOnlyCharacters,
+      sailingBoats: data.sailingBoats,
+      sailingIslands: data.sailingIslands,
+      mutations: data.mutations,
+      MUTATIONS: data.mutations,
+      EVENT_MUTATION_WEIGHTS: data.eventMutationWeights,
+      CONST: cnst,
+      characterById: data.characterById,
+      luckyBlockCharacterById: data.luckyBlockById,
+      sailingIslandById: data.sailingIslandById,
+      sailingBoatById: data.sailingBoatById,
+      totalCharacterValue: data.totalCharacterValue,
+      defaultLuckyBlockIds: data.defaultLuckyBlockIds,
+      sailingRewardCharacters: data.sailingRewardCharacters,
+      sailingRewardCharacterById: data.sailingRewardById,
+      SAILING_DIAMOND_CHANCE: cnst.SAILING_DIAMOND_CHANCE,
+    };
+    console.log("Game data loaded from Python server (" + data.characters.length + " characters)");
+  }
+
+  // Async fetch — resolves when data is ready
+  window.GameDataReady = fetch("/api/game-data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  })
+    .then(function (resp) {
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      return resp.json();
+    })
+    .then(function (data) {
+      populateFromServer(data);
+    })
+    .catch(function (err) {
+      console.warn("Using fallback game data — server may be down:", err.message);
+    });
 })();

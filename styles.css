@@ -1589,6 +1589,12 @@ body.event-radioactive .admin-input::placeholder {
 
 /* --- Admin panel --- */
 
+.admin-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 18px 0 14px;
+}
+
 .admin-panel { min-height: 360px; }
 
 .admin-auth-row {
