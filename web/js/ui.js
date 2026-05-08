@@ -282,8 +282,8 @@ function renderOwned(selectedOwnedCharacterId) {
         ' onclick="window.Game.selectOwnedCard(this)">',
         '<img class="owned-thumb' + (U().isCutoutCharacterImage(ch) ? ' cutout-image' : '') + (mut.css ? ' mutation-' + mut.css : '') + '" src="' + (ch.img || '') + '" alt="" />',
         '<div><p class="owned-name">' + ch.name + levelText + '</p>',
-        '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span> ×' + count + '</p>',
-        '<p class="owned-meta">' + U().formatMoney(eachIncome) + '/s each &middot; Total ' + U().formatMoney(mutIncome) + '/s</p></div>',
+        '<p class="owned-meta">' + rarity.text + ' &middot; <span class="trait-tag' + (mut.css ? ' ' + mut.css : '') + '">' + mut.label + '</span></p>',
+        '<p class="owned-meta">' + U().formatMoney(eachIncome) + '/s</p></div>',
         '<button class="level-up-btn" onclick="event.stopPropagation();window.Game.levelUpCharacter(\'' + entry.id + '\',\'' + mut.key + '\')" title="Level Up">⬆' + (lvl < 500 ? U().formatMoney(Math.floor(eachIncome * 4)) : ' MAX') + '</button>',
         '</article>');
     }
