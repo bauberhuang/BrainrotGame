@@ -1,367 +1,419 @@
-import json
-import hashlib
-import socket
-import sqlite3
-from functools import partial
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from pathlib import Path
-from typing import Tuple
+import uuid
+from collections import deque
+from typing import Any, Dict, List, Optional, Set
 
-PROJECT_ROOT = Path(__file__).parent
-DB_PATH = PROJECT_ROOT / "accounts.db"
-GAME_DATA_PATH = PROJECT_ROOT / "game_data.json"
-
-# Load game data once at startup
-with open(GAME_DATA_PATH, "r", encoding="utf-8") as f:
-    _gd = json.load(f)
-
-CHARACTERS = _gd["characters"]
-LUCKY_BLOCK_CHARACTERS = _gd["luckyBlockCharacters"]
-ADMIN_ONLY_CHARACTERS = _gd["adminOnlyCharacters"]
-SAILING_BOATS = _gd["sailingBoats"]
-SAILING_ISLANDS = _gd["sailingIslands"]
-MUTATIONS = _gd["mutations"]
-EVENT_MUTATION_WEIGHTS = _gd["eventMutationWeights"]
-PLAYTIME_MILESTONES = _gd["playtimeMilestones"]
-CONSTANTS = _gd["constants"]
-CHARACTER_BY_ID = _gd["characterById"]
-LUCKY_BLOCK_BY_ID = _gd["luckyBlockById"]
-SAILING_ISLAND_BY_ID = _gd["sailingIslandById"]
-SAILING_BOAT_BY_ID = _gd["sailingBoatById"]
-TOTAL_CHARACTER_VALUE = _gd["totalCharacterValue"]
-DEFAULT_LUCKY_BLOCK_IDS = _gd["defaultLuckyBlockIds"]
-SAILING_REWARD_CHARACTERS = _gd["sailingRewardCharacters"]
-SAILING_REWARD_BY_ID = _gd["sailingRewardById"]
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, join_room
 
 
-# ---------------------------------------------------------------------------
-# Database helpers
-# ---------------------------------------------------------------------------
-
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+app = Flask(__name__, template_folder="tictactoe/templates", static_folder="tictactoe/static")
+app.config["SECRET_KEY"] = "tiktaktoe-secret"
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 
-def init_db() -> None:
-    conn = get_db()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS saves (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            save_data TEXT NOT NULL,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (username) REFERENCES users(username)
-        )
-    """)
-    conn.commit()
-    conn.close()
+class Player:
+    """Represents a connected player."""
+
+    def __init__(self, player_id: str, name: str, sid: str) -> None:
+        self.id = player_id
+        self.name = name
+        self.sid = sid
+        self.match_id: Optional[str] = None
 
 
-def hash_password(password: str) -> str:
-    salt = "brainrot-casino-salt-v1"
-    return hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+class Match:
+    """Stores state for a single tic tac toe match."""
 
-
-# ---------------------------------------------------------------------------
-# HTTP Request Handler
-# ---------------------------------------------------------------------------
-
-class GameRequestHandler(SimpleHTTPRequestHandler):
-    """Serve static files + JSON API endpoints for account management."""
-
-    def log_message(self, format: str, *args) -> None:
-        return  # suppress log noise
-
-    def end_headers(self) -> None:
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-        self.send_header("Pragma", "no-cache")
-        self.send_header("Expires", "0")
-        super().end_headers()
-
-    def do_GET(self) -> None:
-        if self.path == "/":
-            self.path = "/index.html"
-        super().do_GET()
-
-    def do_POST(self) -> None:
-        path = self.path
-        body_raw = self._read_body()
-        try:
-            data = json.loads(body_raw) if body_raw else {}
-        except json.JSONDecodeError:
-            self._json_reply(400, {"ok": False, "error": "Invalid JSON"})
-            return
-
-        routes = {
-            "/api/signup": self._handle_signup,
-            "/api/signin": self._handle_signin,
-            "/api/settings/username": self._handle_change_username,
-            "/api/settings/password": self._handle_change_password,
-            "/api/save": self._handle_save,
-            "/api/load": self._handle_load,
-            "/api/game-data": self._handle_game_data,
+    def __init__(self, match_id: str, player_one: Player, player_two: Player) -> None:
+        self.id = match_id
+        self.player_ids = [player_one.id, player_two.id]
+        self.player_map = {
+            player_one.id: {
+                "name": player_one.name,
+                "symbol": "〇",
+            },
+            player_two.id: {
+                "name": player_two.name,
+                "symbol": "✕",
+            },
         }
-
-        handler = routes.get(path)
-        if handler:
-            handler(data)
-        else:
-            self._json_reply(404, {"ok": False, "error": "Not Found"})
-
-    def _handle_game_data(self, _data: dict) -> None:
-        """Serve all game data as a single JSON blob."""
-        self._json_reply(200, {
-            "characters": CHARACTERS,
-            "luckyBlockCharacters": LUCKY_BLOCK_CHARACTERS,
-            "adminOnlyCharacters": ADMIN_ONLY_CHARACTERS,
-            "sailingBoats": SAILING_BOATS,
-            "sailingIslands": SAILING_ISLANDS,
-            "mutations": MUTATIONS,
-            "eventMutationWeights": EVENT_MUTATION_WEIGHTS,
-            "playtimeMilestones": PLAYTIME_MILESTONES,
-            "constants": CONSTANTS,
-            "characterById": CHARACTER_BY_ID,
-            "luckyBlockById": LUCKY_BLOCK_BY_ID,
-            "sailingIslandById": SAILING_ISLAND_BY_ID,
-            "sailingBoatById": SAILING_BOAT_BY_ID,
-            "totalCharacterValue": TOTAL_CHARACTER_VALUE,
-            "defaultLuckyBlockIds": DEFAULT_LUCKY_BLOCK_IDS,
-            "sailingRewardCharacters": SAILING_REWARD_CHARACTERS,
-            "sailingRewardById": SAILING_REWARD_BY_ID,
-        })
-
-    # ---- helpers ----
-
-    def _read_body(self) -> str:
-        length = int(self.headers.get("Content-Length", 0))
-        if length > 0:
-            return self.rfile.read(length).decode("utf-8")
-        return ""
-
-    def _json_reply(self, status: int, payload: dict) -> None:
-        body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    # ---- API handlers ----
-
-    def _handle_signup(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-        password = (data.get("password") or "").strip()
-
-        if not username or not password:
-            self._json_reply(400, {"ok": False, "error": "Username and password are required."})
-            return
-        if len(username) < 2 or len(username) > 24:
-            self._json_reply(400, {"ok": False, "error": "Username must be 2-24 characters."})
-            return
-        if len(password) < 3 or len(password) > 64:
-            self._json_reply(400, {"ok": False, "error": "Password must be 3-64 characters."})
-            return
-
-        try:
-            conn = get_db()
-            conn.execute(
-                "INSERT INTO users (username, password) VALUES (?, ?)",
-                (username, hash_password(password)),
-            )
-            conn.commit()
-            conn.close()
-            self._json_reply(200, {"ok": True})
-        except sqlite3.IntegrityError:
-            self._json_reply(409, {"ok": False, "error": "Username already taken."})
-
-    def _handle_signin(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-        password = (data.get("password") or "").strip()
-
-        if not username or not password:
-            self._json_reply(400, {"ok": False, "error": "Username and password are required."})
-            return
-
-        conn = get_db()
-        row = conn.execute(
-            "SELECT * FROM users WHERE username = ? AND password = ?",
-            (username, hash_password(password)),
-        ).fetchone()
-
-        if not row:
-            conn.close()
-            self._json_reply(401, {"ok": False, "error": "Invalid username or password."})
-            return
-
-        # Load saved game state if any
-        save_row = conn.execute(
-            "SELECT save_data FROM saves WHERE username = ?", (username,)
-        ).fetchone()
-        conn.close()
-
-        save_data = None
-        if save_row:
-            try:
-                save_data = json.loads(save_row["save_data"])
-            except (json.JSONDecodeError, TypeError):
-                save_data = None
-
-        self._json_reply(200, {"ok": True, "saveData": save_data})
-
-    def _handle_change_username(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-        new_username = (data.get("newUsername") or "").strip()
-
-        if not username or not new_username:
-            self._json_reply(400, {"ok": False, "error": "Username and new username are required."})
-            return
-        if len(new_username) < 2 or len(new_username) > 24:
-            self._json_reply(400, {"ok": False, "error": "New username must be 2-24 characters."})
-            return
-
-        try:
-            conn = get_db()
-            conn.execute("UPDATE users SET username = ? WHERE username = ?", (new_username, username))
-            # Also update saves foreign key
-            conn.execute("UPDATE saves SET username = ? WHERE username = ?", (new_username, username))
-            conn.commit()
-            conn.close()
-            self._json_reply(200, {"ok": True, "newUsername": new_username})
-        except sqlite3.IntegrityError:
-            self._json_reply(409, {"ok": False, "error": "That username is already taken."})
-
-    def _handle_change_password(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-        old_password = (data.get("oldPassword") or "").strip()
-        new_password = (data.get("newPassword") or "").strip()
-
-        if not username or not old_password or not new_password:
-            self._json_reply(400, {"ok": False, "error": "All fields are required."})
-            return
-        if len(new_password) < 3 or len(new_password) > 64:
-            self._json_reply(400, {"ok": False, "error": "New password must be 3-64 characters."})
-            return
-
-        conn = get_db()
-        row = conn.execute(
-            "SELECT * FROM users WHERE username = ? AND password = ?",
-            (username, hash_password(old_password)),
-        ).fetchone()
-
-        if not row:
-            conn.close()
-            self._json_reply(401, {"ok": False, "error": "Old password is incorrect."})
-            return
-
-        if old_password == new_password:
-            conn.close()
-            self._json_reply(200, {"ok": True, "message": "Already the password you wished."})
-            return
-
-        conn.execute(
-            "UPDATE users SET password = ? WHERE username = ?",
-            (hash_password(new_password), username),
-        )
-        conn.commit()
-        conn.close()
-        self._json_reply(200, {"ok": True})
-
-    def _handle_save(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-        save_data = data.get("saveData")
-
-        if not username or save_data is None:
-            self._json_reply(400, {"ok": False, "error": "Username and saveData are required."})
-            return
-
-        conn = get_db()
-        conn.execute(
-            """INSERT INTO saves (username, save_data, updated_at)
-               VALUES (?, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT(username) DO UPDATE SET
-               save_data = excluded.save_data,
-               updated_at = CURRENT_TIMESTAMP""",
-            (username, json.dumps(save_data)),
-        )
-        conn.commit()
-        conn.close()
-        self._json_reply(200, {"ok": True})
-
-    def _handle_load(self, data: dict) -> None:
-        username = (data.get("username") or "").strip()
-
-        if not username:
-            self._json_reply(400, {"ok": False, "error": "Username is required."})
-            return
-
-        conn = get_db()
-        row = conn.execute(
-            "SELECT save_data FROM saves WHERE username = ?", (username,)
-        ).fetchone()
-        conn.close()
-
-        if not row:
-            self._json_reply(200, {"ok": True, "saveData": None})
-            return
-
-        try:
-            save_data = json.loads(row["save_data"])
-            self._json_reply(200, {"ok": True, "saveData": save_data})
-        except (json.JSONDecodeError, TypeError):
-            self._json_reply(200, {"ok": True, "saveData": None})
+        self.board: List[Optional[str]] = [None] * 9
+        self.moves: deque = deque()
+        self.turn: str = player_one.id
+        self.winner: Optional[str] = None
 
 
-# ---------------------------------------------------------------------------
-# Server helpers
-# ---------------------------------------------------------------------------
+waiting_players: List[Player] = []
+players_by_sid: Dict[str, Player] = {}
+players_by_id: Dict[str, Player] = {}
+matches: Dict[str, Match] = {}
+completed_matches: List[Dict[str, str]] = []
+admin_clients: Set[str] = set()
 
-def create_server(host: str, start_port: int, attempts: int = 20) -> Tuple[ThreadingHTTPServer, int]:
-    handler = partial(GameRequestHandler, directory=str(PROJECT_ROOT))
-    for port in range(start_port, start_port + attempts):
-        try:
-            server = ThreadingHTTPServer((host, port), handler)
-            return server, port
-        except OSError:
+
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("img/logo.svg")
+
+@app.route("/")
+def home() -> str:
+    """Serve the player lobby page."""
+    return render_template("player.html")
+
+
+@app.route("/admin")
+def admin() -> str:
+    """Serve the admin dashboard."""
+    return render_template("admin.html")
+
+
+def broadcast_lobby_status() -> None:
+    """Notify all clients about the current lobby population."""
+    socketio.emit("lobby_status", {"count": len(players_by_id)})
+
+
+def broadcast_admin_state() -> None:
+    """Send updated admin data to connected admins."""
+    active_matches = []
+    for match in matches.values():
+        if match.winner:
             continue
-    raise OSError(f"Could not bind a local port in range {start_port}-{start_port + attempts - 1}")
+        p1, p2 = match.player_ids
+        active_matches.append(
+            {
+                "match_id": match.id,
+                "display": f"{match.player_map[p1]['name']} vs. {match.player_map[p2]['name']}",
+            }
+        )
+
+    payload = {
+        "waiting": [player.name for player in waiting_players],
+        "active_matches": active_matches,
+        "completed": completed_matches,
+        "show_qr": not matches,
+    }
+
+    for sid in list(admin_clients):
+        socketio.emit("admin_state", payload, room=sid)
 
 
-def get_lan_ip() -> str | None:
+def build_board_payload(match: Match) -> Dict[str, Any]:
+    """Construct the payload for a board update."""
+    move_order = [0] * 9
+    for index, move in enumerate(match.moves):
+        move_order[move["position"]] = index + 1
+
+    return {
+        "match_id": match.id,
+        "board": [cell or "" for cell in match.board],
+        "turn": match.player_map[match.turn]["name"],
+        "turn_id": match.turn,
+        "players": [match.player_map[pid]["name"] for pid in match.player_ids],
+        "move_order": move_order,
+    }
+
+
+def cleanup_player(player: Player) -> None:
+    """Remove a player from waiting lists and matches."""
+    if player in waiting_players:
+        waiting_players.remove(player)
+    if player.match_id:
+        match = matches.get(player.match_id)
+        if match and not match.winner:
+            # Award the win to the opponent.
+            opponent_id = next(pid for pid in match.player_ids if pid != player.id)
+            match.winner = opponent_id
+            winner_name = match.player_map[opponent_id]["name"]
+            completed_matches.append(
+                {
+                    "match_id": match.id,
+                    "pair": f"{match.player_map[match.player_ids[0]]['name']} vs. {match.player_map[match.player_ids[1]]['name']}",
+                    "winner": winner_name,
+                }
+            )
+            opponent = players_by_id.get(opponent_id)
+            if opponent:
+                socketio.emit(
+                    "match_result",
+                    {"outcome": "win", "opponent": player.name, "by_disconnect": True},
+                    room=opponent.sid,
+                )
+                opponent.match_id = None
+            socketio.emit("match_result", {"outcome": "lose"}, room=player.sid)
+            socketio.emit(
+                "match_finished",
+                {
+                    "pair": f"{match.player_map[match.player_ids[0]]['name']} vs. {match.player_map[match.player_ids[1]]['name']}",
+                    "winner": winner_name,
+                },
+                room=match.id,
+            )
+            matches.pop(match.id, None)
+    players_by_id.pop(player.id, None)
+
+
+@socketio.on("connect")
+def on_connect() -> None:
+    """Initial socket connection handler."""
+    socketio.emit("connected", {"message": "connected"}, room=request.sid)
+
+
+@socketio.on("disconnect")
+def on_disconnect() -> None:
+    """Clean up after socket disconnect."""
+    sid = request.sid
+    admin_clients.discard(sid)
+    player = players_by_sid.pop(sid, None)
+    if player:
+        cleanup_player(player)
+    broadcast_lobby_status()
+    broadcast_admin_state()
+
+
+@socketio.on("player_join")
+def player_join(data: Dict[str, str]) -> None:
+    """Handle a player joining the lobby."""
+    sid = request.sid
+    name = data.get("name", "").strip()
+    if not name:
+        socketio.emit("join_error", {"message": "名前を入れてね。"}, room=sid)
+        return
+
+    # Reuse existing player object if they already connected.
+    player = players_by_sid.get(sid)
+    if player:
+        player.name = name
+        player.match_id = None
+        if player in waiting_players:
+            waiting_players.remove(player)
+    else:
+        player_id = str(uuid.uuid4())
+        player = Player(player_id, name, sid)
+        players_by_sid[sid] = player
+        players_by_id[player_id] = player
+
+    waiting_players.append(player)
+    socketio.emit("lobby_joined", {"player_id": player.id, "name": name}, room=sid)
+    broadcast_lobby_status()
+    broadcast_admin_state()
+
+
+@socketio.on("admin_join")
+def admin_join(_: Dict) -> None:
+    """Register an admin client for updates."""
+    admin_clients.add(request.sid)
+    broadcast_admin_state()
+
+
+@socketio.on("start_matching")
+def start_matching(_: Dict) -> None:
+    """Pair players into matches upon admin request."""
+    if not waiting_players:
+        return
+
+    queue_copy = list(waiting_players)
+    waiting_players.clear()
+
+    pairs: List[Match] = []
+    while len(queue_copy) >= 2:
+        player_one = queue_copy.pop(0)
+        player_two = queue_copy.pop(0)
+        match_id = str(uuid.uuid4())
+        match = Match(match_id, player_one, player_two)
+        matches[match_id] = match
+        player_one.match_id = match_id
+        player_two.match_id = match_id
+        pairs.append(match)
+
+    if queue_copy:
+        bye_player = queue_copy.pop(0)
+        socketio.emit(
+            "match_result",
+            {"outcome": "win", "opponent": "", "bye": True},
+            room=bye_player.sid,
+        )
+        completed_matches.append(
+            {
+                "match_id": str(uuid.uuid4()),
+                "pair": f"{bye_player.name} (ひとり)",
+                "winner": bye_player.name,
+            }
+        )
+        bye_player.match_id = None
+
+    for match in pairs:
+        p1, p2 = match.player_ids
+        player_one = players_by_id.get(p1)
+        player_two = players_by_id.get(p2)
+        if not player_one or not player_two:
+            continue
+        join_room(match.id, sid=player_one.sid)
+        join_room(match.id, sid=player_two.sid)
+        socketio.emit(
+            "match_start",
+            {
+                "match_id": match.id,
+                "opponent": match.player_map[p2]["name"],
+                "symbol": match.player_map[p1]["symbol"],
+                "your_turn": match.turn == p1,
+            },
+            room=player_one.sid,
+        )
+        socketio.emit(
+            "match_start",
+            {
+                "match_id": match.id,
+                "opponent": match.player_map[p1]["name"],
+                "symbol": match.player_map[p2]["symbol"],
+                "your_turn": match.turn == p2,
+            },
+            room=player_two.sid,
+        )
+        socketio.emit(
+            "board_update", build_board_payload(match), room=match.id
+        )
+
+    broadcast_admin_state()
+
+
+def apply_move(match: Match, player_id: str, position: int) -> bool:
+    """Apply a move to a match if valid."""
+    if match.winner or position < 0 or position >= 9:
+        return False
+    if match.turn != player_id:
+        return False
+
+    symbol = match.player_map[player_id]["symbol"]
+    player_moves = [move for move in match.moves if move["player"] == player_id]
+    oldest_move = player_moves[0] if len(player_moves) >= 3 else None
+
+    # A move is only valid if the destination is empty or will be cleared by
+    # recycling the player's oldest mark.
+    if match.board[position] is not None and not (
+        oldest_move and oldest_move["position"] == position
+    ):
+        return False
+
+    if oldest_move:
+        match.board[oldest_move["position"]] = None
+        match.moves.remove(oldest_move)
+
+    match.board[position] = symbol
+    match.moves.append({"player": player_id, "position": position})
+
+    # Switch turn.
+    other_player = next(pid for pid in match.player_ids if pid != player_id)
+    match.turn = other_player
+    return True
+
+
+def evaluate_winner(match: Match) -> Optional[str]:
+    """Determine if a match has a winner."""
+    winning_lines = [
+        (0, 1, 2),
+        (3, 4, 5),
+        (6, 7, 8),
+        (0, 3, 6),
+        (1, 4, 7),
+        (2, 5, 8),
+        (0, 4, 8),
+        (2, 4, 6),
+    ]
+    for a, b, c in winning_lines:
+        line = match.board[a], match.board[b], match.board[c]
+        if line[0] and line[0] == line[1] == line[2]:
+            return line[0]
+    return None
+
+
+@socketio.on("make_move")
+def make_move(data: Dict[str, str]) -> None:
+    """Handle move requests from players."""
+    sid = request.sid
+    player = players_by_sid.get(sid)
+    if not player or not player.match_id:
+        return
+    match = matches.get(player.match_id)
+    if not match:
+        return
+
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.connect(("8.8.8.8", 80))
-            return sock.getsockname()[0]
-    except OSError:
-        return None
+        position = int(data.get("position", -1))
+    except (TypeError, ValueError):
+        socketio.emit("move_rejected", {}, room=sid)
+        return
+
+    changed = apply_move(match, player.id, position)
+    if not changed:
+        socketio.emit("move_rejected", {}, room=sid)
+        return
+
+    socketio.emit("board_update", build_board_payload(match), room=match.id)
+
+    winner_symbol = evaluate_winner(match)
+    if winner_symbol:
+        match.winner = next(
+            pid for pid, info in match.player_map.items() if info["symbol"] == winner_symbol
+        )
+        winner = players_by_id.get(match.winner)
+        loser_id = next(pid for pid in match.player_ids if pid != match.winner)
+        loser = players_by_id.get(loser_id)
+        winner_name = match.player_map[match.winner]["name"]
+        loser_name = match.player_map[loser_id]["name"]
+        completed_matches.append(
+            {
+                "match_id": match.id,
+                "pair": f"{winner_name} vs. {loser_name}",
+                "winner": winner_name,
+            }
+        )
+        if winner:
+            socketio.emit(
+                "match_result",
+                {"outcome": "win", "opponent": loser_name},
+                room=winner.sid,
+            )
+            winner.match_id = None
+        if loser:
+            socketio.emit(
+                "match_result",
+                {"outcome": "lose", "opponent": winner_name},
+                room=loser.sid,
+            )
+            loser.match_id = None
+        socketio.emit(
+            "match_finished",
+            {
+                "pair": f"{match.player_map[match.player_ids[0]]['name']} vs. {match.player_map[match.player_ids[1]]['name']}",
+                "winner": winner_name,
+            },
+            room=match.id,
+        )
+        matches.pop(match.id, None)
+        broadcast_admin_state()
 
 
-def main() -> None:
-    init_db()
-    host = "0.0.0.0"
-    server, port = create_server(host, 5002)
-    lan_ip = get_lan_ip()
-
-    print(f"Serving brainrot idle game at http://127.0.0.1:{port}")
-    if lan_ip:
-        print(f"Open on phones/iPads on the same Wi-Fi: http://{lan_ip}:{port}")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nStopping server...")
-    finally:
-        server.server_close()
+@socketio.on("watch_match")
+def watch_match(data: Dict[str, str]) -> None:
+    """Allow an admin to watch a specific match in real time."""
+    match_id = data.get("match_id")
+    match = matches.get(match_id or "")
+    if not match:
+        socketio.emit("watch_error", {"message": "試合が見つかりません。"}, room=request.sid)
+        return
+    sid = request.sid
+    join_room(match_id, sid=sid)
+    socketio.emit(
+        "board_update",
+        build_board_payload(match),
+        room=sid,
+    )
 
 
 if __name__ == "__main__":
-    main()
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=8000
+    )
+
