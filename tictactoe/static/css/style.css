@@ -1,0 +1,265 @@
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+:root {
+  --mint: #b1f0dc;
+  --aqua: #76d7ea;
+  --navy: #1a446b;
+  --soft-gray: #f2f7fa;
+  --accent: #f9b6c1;
+  --move-one: #d86a6a;
+  --move-two: #6a94d8;
+  --move-three: #6ac49b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  background: var(--soft-gray);
+  color: var(--navy);
+}
+
+header {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.logo img {
+  height: 64px;
+  width: auto;
+}
+
+.main-card {
+  max-width: 960px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 16px 40px rgba(26, 68, 107, 0.15);
+}
+
+.section-title {
+  font-size: 1.8rem;
+  margin: 1.5rem 0 1rem;
+}
+
+p,
+li {
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+button {
+  font-family: inherit;
+  font-size: 1.2rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:disabled {
+  background: #9bb4cc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(26, 68, 107, 0.2);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  border: 2px solid var(--aqua);
+  font-size: 1.2rem;
+  background: var(--soft-gray);
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form-row button {
+  flex-shrink: 0;
+}
+
+.notice {
+  background: var(--mint);
+  border-radius: 20px;
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  font-size: 1.1rem;
+}
+
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.board-cell {
+  background: var(--soft-gray);
+  border-radius: 20px;
+  text-align: center;
+  font-size: 7.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-height: 90px;
+  color: var(--navy);
+}
+
+.board-cell:hover {
+  transform: translateY(-3px);
+  background: var(--mint);
+}
+
+.board-cell.disabled {
+  cursor: default;
+  transform: none;
+  background: #e3eef5;
+}
+
+.board-cell.move-order-1 {
+  color: var(--move-one);
+}
+
+.board-cell.move-order-2 {
+  color: var(--move-two);
+}
+
+.board-cell.move-order-3 {
+  color: var(--move-three);
+}
+
+.status-label {
+  font-size: 1.3rem;
+  margin-top: 1rem;
+  font-weight: 700;
+}
+
+.small-text {
+  font-size: 1rem;
+  color: #51738e;
+}
+
+.flex-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.card {
+  flex: 1 1 280px;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(26, 68, 107, 0.12);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  padding: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.qr-box {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0 2rem;
+}
+
+.qr-box #qr-code {
+  width: 260px;
+  height: 260px;
+}
+
+.match-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.1rem 0.1rem;
+  border-radius: 18px;
+  background: var(--soft-gray);
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.match-item:hover {
+  transform: translateX(4px);
+}
+
+.match-item.active {
+  box-shadow: 0 0 0 3px var(--aqua);
+}
+
+.viewer-area {
+  background: white;
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: inset 0 0 0 2px var(--mint);
+}
+
+.viewer-area .board {
+  margin-top: 1rem;
+}
+
+.alert {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: var(--accent);
+  color: #742636;
+  font-weight: 600;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .main-card {
+    padding: 1.5rem;
+  }
+
+  .board {
+    gap: 0.4rem;
+  }
+
+  .board-cell {
+    border-radius: 16px;
+    padding: 1.5rem 0;
+    font-size: 2.4rem;
+  }
+}
