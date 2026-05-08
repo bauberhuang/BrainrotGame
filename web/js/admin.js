@@ -103,12 +103,16 @@ window.Admin = (function () {
     var mutation = $("adminMutationSelect").value;
     var cid = $("adminBrainrotSelect").value;
     var amount = Math.max(1, Math.min(1e18, Number($("adminAmountInput").value) || 1));
+    var level = Math.max(0, Math.min(500, Number($("adminSpawnLevelInput").value) || 0));
     if (!cid || !U().isKnownCharacterId(cid)) { spawnStatus("Choose a valid brainrot."); return; }
     var ch = U().getOwnedCharacterData(cid);
     G().grantOwnedCharacter(cid, mutation, amount);
-    G().setSelectedOwnedCharacterId(cid);
+    // Set the level on the spawned entry
+    var countKey = U().getMutationConfig(mutation).countKey;
+    var levelKey = countKey.replace("Count", "Level");
+    S().getState().owned[cid][levelKey] = Math.max(S().getState().owned[cid][levelKey] || 0, level);
     G().fullRender();
-    spawnStatus("Spawned " + amount + " " + U().getMutationDisplayName(mutation).toLowerCase() + " " + ch.name + ".");
+    spawnStatus("Spawned " + amount + " " + U().getMutationDisplayName(mutation).toLowerCase() + " " + ch.name + " at Lv." + level + ".");
   }
 
   function spawnAllBrainrots() {
